@@ -1,9 +1,8 @@
-#[derive(Debug, PartialEq)]
-#[derive(serde::Deserialize, serde::Serialize)]
-enum Values {
-    Uno,
-    Dos,
-    Tres
+use serialport::{available_ports, SerialPortInfo, SerialPortType};
+#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+enum STATES {
+    Close,
+    Open,
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -11,23 +10,25 @@ enum Values {
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     // Example stuff:
-    logstring : String,
+    logstring: String,
     #[serde(skip)] // This how you opt-out of serialization of a field
-    selected: Values,
-
+    selected: String,
+    port_list: Vec<String>,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            selected : Values::Dos,
-            logstring : "Starting app".to_owned()
+            selected: String::new(),
+            port_list: Vec::new(),
+            logstring: "Starting app\n".to_owned(),
         }
     }
 }
 
 impl TemplateApp {
+    const DEFAULT_PORT: &'static str = "No port";
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
@@ -35,18 +36,92 @@ impl TemplateApp {
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
-        if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+        // if let Some(storage) = cc.storage {
+        //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+        // }
+        let mut app: TemplateApp = Default::default();
+        app.update_ports();
+        if app.port_list.len() > 1 {
+            app.selected = app.port_list[0].clone();
+        } else {
+            app.selected = String::from(TemplateApp::DEFAULT_PORT);
         }
-
-        Default::default()
+        app
     }
+
+    fn update_ports(&mut self) {
+        match available_ports() {
+            Ok(mut ports) => {
+                // Let's output ports in a stable order to facilitate comparing the output from
+                // different runs (on different platforms, with different features, ...).
+                ports.sort_by_key(|i| i.port_name.clone());
+
+                match ports.len() {
+                    0 => println!("No ports found."),
+                    1 => println!("Found 1 port:"),
+                    n => println!("Found {} ports:", n),
+                };
+
+                for p in ports {
+                    println!("    {}", p.port_name);
+                    self.port_list.push(p.port_name);
+                    match p.port_type {
+                        SerialPortType::UsbPort(info) => {
+                            println!("        Type: USB");
+                            println!("        VID: {:04x}", info.vid);
+                            println!("        PID: {:04x}", info.pid);
+                            #[cfg(feature = "usbportinfo-interface")]
+                            println!(
+                                "        Interface: {}",
+                                info.interface
+                                    .as_ref()
+                                    .map_or("".to_string(), |x| format!("{:02x}", *x))
+                            );
+                            println!(
+                                "        Serial Number: {}",
+                                info.serial_number.as_ref().map_or("", String::as_str)
+                            );
+                            println!(
+                                "        Manufacturer: {}",
+                                info.manufacturer.as_ref().map_or("", String::as_str)
+                            );
+                            println!(
+                                "        Product: {}",
+                                info.product.as_ref().map_or("", String::as_str)
+                            );
+                        }
+                        SerialPortType::BluetoothPort => {
+                            println!("        Type: Bluetooth");
+                        }
+                        SerialPortType::PciPort => {
+                            println!("        Type: PCI");
+                        }
+                        SerialPortType::Unknown => {
+                            println!("        Type: Unknown");
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("{:?}", e);
+                eprintln!("Error listing serial ports");
+            }
+        }
+    }
+
+    fn write_log(&mut self, message: &str) {
+        eprintln!("{}", message);
+        self.logstring += message;
+        self.logstring += "\n";
+    }
+
+    
 }
 
 impl eframe::App for TemplateApp {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
+        // eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
     /// Called each time the UI needs repainting, which may be many times per second.
@@ -82,27 +157,31 @@ impl eframe::App for TemplateApp {
                         .code_editor()
                         .desired_rows(10)
                         .lock_focus(true)
-                        .desired_width(f32::INFINITY)
-                        // .layouter(&mut layouter),
+                        .desired_width(f32::INFINITY), // .layouter(&mut layouter),
                 );
             });
 
             ui.separator();
 
-           
-
-        ui.horizontal(|ui|{
-            egui::ComboBox::from_label("Select port")
-            .selected_text(format!("{:?}",self.selected))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut self.selected, Values::Dos, "First");
-            }
-        );
-            if ui.button("Open port").clicked() {
-            }
-        })
-        
-
+            ui.horizontal(|ui| {
+                if ui.button("Update ports").clicked() {
+                    self.update_ports();
+                    if self.port_list.len() > 1 {
+                        self.selected = self.port_list[0].clone();
+                    } else {
+                        self.selected = String::from(TemplateApp::DEFAULT_PORT);
+                    }
+                }
+                egui::ComboBox::from_label("Select port")
+                    .selected_text(format!("{:?}", self.selected))
+                    .show_ui(ui, |ui| {
+                        // ui.selectable_value(&mut self.selected, Values::Dos, "First");
+                        for port_name in &self.port_list {
+                            ui.selectable_value(&mut self.selected, port_name.clone(), port_name);
+                        }
+                    });
+                if ui.button("Open port").clicked() {}
+            })
         });
     }
 }
