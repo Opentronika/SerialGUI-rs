@@ -2,6 +2,26 @@ use eframe::glow::AND;
 use serialport::{available_ports, SerialPort, SerialPortInfo, SerialPortType};
 use std::time::Duration;
 
+struct BaudRate {
+    string_repr: &'static str,
+    numeric_repr: u32,
+}
+
+const BAUD_RATES: [BaudRate; 3] = [
+    BaudRate {
+        string_repr: "9600",
+        numeric_repr: 9600,
+    },
+    BaudRate {
+        string_repr: "38400",
+        numeric_repr: 38400,
+    },
+    BaudRate {
+        string_repr: "115200",
+        numeric_repr: 115200,
+    },
+];
+
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 enum STATES {
     Close,
@@ -19,6 +39,7 @@ pub struct TemplateApp {
     port_list: Vec<String>,
     #[serde(skip)] // This how you opt-out of serialization of a field
     port: Option<Box<dyn SerialPort>>,
+    baudratesel: u32,
 }
 
 impl Default for TemplateApp {
@@ -29,6 +50,7 @@ impl Default for TemplateApp {
             port_list: Vec::new(),
             logstring: "Starting app\n".to_owned(),
             port: None,
+            baudratesel: 115200,
         }
     }
 }
@@ -184,9 +206,21 @@ impl eframe::App for TemplateApp {
                             ui.selectable_value(&mut self.selected, port_name.clone(), port_name);
                         }
                     });
+                egui::ComboBox::from_label("Select baudrate")
+                    .selected_text(format!("{:?}", self.baudratesel))
+                    .show_ui(ui, |ui| {
+                        // ui.selectable_value(&mut self.selected, Values::Dos, "First");
+                        for baudrate in &BAUD_RATES {
+                            ui.selectable_value(
+                                &mut self.baudratesel,
+                                baudrate.numeric_repr,
+                                baudrate.string_repr,
+                            );
+                        }
+                    });
                 if ui.button("Open port").clicked() {
                     if self.port.is_none() {
-                        let portopen = serialport::new(self.selected.clone(), 115200)
+                        let portopen = serialport::new(self.selected.clone(), self.baudratesel)
                             .timeout(Duration::from_millis(10))
                             .open();
                         match portopen {
