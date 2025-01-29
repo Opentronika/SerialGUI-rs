@@ -1,4 +1,7 @@
-use serialport::{available_ports, SerialPortInfo, SerialPortType};
+use eframe::glow::AND;
+use serialport::{available_ports, SerialPort, SerialPortInfo, SerialPortType};
+use std::time::Duration;
+
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 enum STATES {
     Close,
@@ -14,6 +17,8 @@ pub struct TemplateApp {
     #[serde(skip)] // This how you opt-out of serialization of a field
     selected: String,
     port_list: Vec<String>,
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    port: Option<Box<dyn SerialPort>>,
 }
 
 impl Default for TemplateApp {
@@ -23,6 +28,7 @@ impl Default for TemplateApp {
             selected: String::new(),
             port_list: Vec::new(),
             logstring: "Starting app\n".to_owned(),
+            port: None,
         }
     }
 }
@@ -114,8 +120,6 @@ impl TemplateApp {
         self.logstring += message;
         self.logstring += "\n";
     }
-
-    
 }
 
 impl eframe::App for TemplateApp {
@@ -180,8 +184,32 @@ impl eframe::App for TemplateApp {
                             ui.selectable_value(&mut self.selected, port_name.clone(), port_name);
                         }
                     });
-                if ui.button("Open port").clicked() {}
+                if ui.button("Open port").clicked() {
+                    if self.port.is_none() {
+                        let portopen = serialport::new(self.selected.clone(), 115200)
+                            .timeout(Duration::from_millis(10))
+                            .open();
+                        match portopen {
+                            Ok(portopen) => {
+                                self.port = Some(portopen);
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to open \"{}\". Error: {}", self.selected, e);
+                            }
+                        }
+                    }
+                }
             })
         });
+
+        if let Some(ref mut port) = self.port {
+            let size = port.bytes_to_read().unwrap_or(0);
+            if size > 0 {
+                let mut serial_buf: Vec<u8> = vec![0; 1000];
+                port.read(&mut serial_buf).unwrap();
+                let message = String::from_utf8(serial_buf[..size as usize].to_vec());
+                self.write_log(message.unwrap_or(String::from("")).as_str());
+            }
+        }
     }
 }
