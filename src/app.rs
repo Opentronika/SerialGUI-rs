@@ -39,6 +39,7 @@ pub struct TemplateApp {
     #[serde(skip)] // This how you opt-out of serialization of a field
     port: Option<Box<dyn SerialPort>>,
     baudratesel: u32,
+    buttonportstring: String,
 }
 
 impl Default for TemplateApp {
@@ -50,6 +51,7 @@ impl Default for TemplateApp {
             logstring: "Starting app\n".to_owned(),
             port: None,
             baudratesel: 115200,
+            buttonportstring: String::from("Open port"),
         }
     }
 }
@@ -126,6 +128,29 @@ impl TemplateApp {
                 eprintln!("{:?}", e);
                 eprintln!("Error listing serial ports");
             }
+        }
+    }
+
+    fn open_port(&mut self) -> bool {
+        let mut state = false;
+        let portopen = serialport::new(self.selected.clone(), self.baudratesel)
+            .timeout(Duration::from_millis(10))
+            .open();
+        match portopen {
+            Ok(portopen) => {
+                self.port = Some(portopen);
+                state = true;
+            }
+            Err(e) => {
+                eprintln!("Failed to open \"{}\". Error: {}", self.selected, e);
+            }
+        }
+        return state;
+    }
+
+    fn close_port(&mut self) {
+        if self.port.is_some() {
+            self.port = None;
         }
     }
 
@@ -210,19 +235,14 @@ impl eframe::App for TemplateApp {
                             );
                         }
                     });
-                if ui.button("Open port").clicked() {
+                if ui.button(self.buttonportstring.clone()).clicked() {
                     if self.port.is_none() {
-                        let portopen = serialport::new(self.selected.clone(), self.baudratesel)
-                            .timeout(Duration::from_millis(10))
-                            .open();
-                        match portopen {
-                            Ok(portopen) => {
-                                self.port = Some(portopen);
-                            }
-                            Err(e) => {
-                                eprintln!("Failed to open \"{}\". Error: {}", self.selected, e);
-                            }
+                        if self.open_port() {
+                            self.buttonportstring = "Close port".to_string();
                         }
+                    } else {
+                        self.buttonportstring = "Open port".to_string();
+                        self.close_port();
                     }
                 }
             })
