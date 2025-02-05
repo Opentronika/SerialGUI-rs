@@ -1,3 +1,5 @@
+use core::f32;
+use egui::Vec2;
 use serialport::{available_ports, SerialPort, SerialPortType};
 use std::time::Duration;
 
@@ -40,7 +42,7 @@ pub struct TemplateApp {
     port: Option<Box<dyn SerialPort>>,
     baudratesel: u32,
     buttonportstring: String,
-    sendmessagestring : String
+    sendmessagestring: String,
 }
 
 impl Default for TemplateApp {
@@ -53,7 +55,7 @@ impl Default for TemplateApp {
             port: None,
             baudratesel: 115200,
             buttonportstring: String::from("Open port"),
-            sendmessagestring: String::new()
+            sendmessagestring: String::new(),
         }
     }
 }
@@ -194,21 +196,26 @@ impl eframe::App for TemplateApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
+            let sizeavailable = ui.available_size();
+            let sizetext = Vec2::new(sizeavailable.x, sizeavailable.y * 0.90);
             // The central panel the region left after adding TopPanel's and SidePanel's
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.add(
-                    egui::TextEdit::multiline(&mut self.logstring)
-                        .font(egui::TextStyle::Monospace) // for cursor height
-                        .code_editor()
-                        .desired_rows(10)
-                        .lock_focus(true)
-                        .desired_width(f32::INFINITY), // .layouter(&mut layouter),
-                );
-            });
+            egui::ScrollArea::vertical()
+                .max_height(sizetext.y)
+                .show(ui, |ui| {
+                    ui.add_sized(
+                        sizetext,
+                        egui::TextEdit::multiline(&mut self.logstring)
+                            .font(egui::TextStyle::Monospace) // for cursor height
+                            .code_editor()
+                            .desired_rows(10)
+                            .lock_focus(true)
+                            .desired_width(f32::INFINITY), // .layouter(&mut layouter),
+                    );
+                });
 
             ui.separator();
 
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 if ui.button("Update ports").clicked() {
                     self.update_ports();
                     if self.port_list.len() > 1 {
@@ -249,8 +256,12 @@ impl eframe::App for TemplateApp {
                 }
             });
             ui.horizontal(|ui| {
-                ui.add(egui::TextEdit::singleline(&mut self.sendmessagestring));
-                if ui.button("Send").clicked(){
+                let sizesend = Vec2::new(sizeavailable.x * 0.9, 20.0);
+                ui.add_sized(
+                    sizesend,
+                    egui::TextEdit::singleline(&mut self.sendmessagestring),
+                );
+                if ui.button("Send").clicked() {
                     // self.write_log("send");
                     if let Some(ref mut port) = self.port {
                         match port.write(self.sendmessagestring.as_bytes()) {
