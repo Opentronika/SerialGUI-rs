@@ -40,6 +40,7 @@ pub struct TemplateApp {
     port: Option<Box<dyn SerialPort>>,
     baudratesel: u32,
     buttonportstring: String,
+    sendmessagestring : String
 }
 
 impl Default for TemplateApp {
@@ -52,6 +53,7 @@ impl Default for TemplateApp {
             port: None,
             baudratesel: 115200,
             buttonportstring: String::from("Open port"),
+            sendmessagestring: String::new()
         }
     }
 }
@@ -245,7 +247,19 @@ impl eframe::App for TemplateApp {
                         self.close_port();
                     }
                 }
-            })
+            });
+            ui.horizontal(|ui| {
+                ui.add(egui::TextEdit::singleline(&mut self.sendmessagestring));
+                if ui.button("Send").clicked(){
+                    // self.write_log("send");
+                    if let Some(ref mut port) = self.port {
+                        match port.write(self.sendmessagestring.as_bytes()) {
+                            Ok(_) => eprintln!("Write success"),
+                            Err(e) => eprintln!("{:?}", e),
+                        }
+                    }
+                }
+            });
         });
 
         if let Some(ref mut port) = self.port {
