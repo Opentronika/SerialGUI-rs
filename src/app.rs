@@ -23,6 +23,24 @@ const BAUD_RATES: [BaudRate; 3] = [
     },
 ];
 
+fn flow_control_iter() -> impl Iterator<Item = FlowControl> {
+    [
+        FlowControl::None,
+        FlowControl::Software,
+        FlowControl::Hardware,
+    ]
+    .iter()
+    .cloned()
+}
+
+fn parity_iter() -> impl Iterator<Item = Parity> {
+    [Parity::None, Parity::Even, Parity::Odd].iter().cloned()
+}
+
+fn stop_bits_iter() -> impl Iterator<Item = StopBits> {
+    [StopBits::One, StopBits::Two].iter().cloned()
+}
+
 struct PortSettings {
     port_name: String,
     baudrate: u32,
@@ -244,7 +262,8 @@ impl eframe::App for TemplateApp {
                         self.port_settings.port_name = String::from(TemplateApp::DEFAULT_PORT);
                     }
                 }
-                egui::ComboBox::from_label("Select port")
+                ui.label("Select port");
+                egui::ComboBox::from_id_salt(500)
                     .selected_text(format!("{:?}", self.port_settings.port_name))
                     .show_ui(ui, |ui| {
                         // ui.selectable_value(&mut self.selected, Values::Dos, "First");
@@ -256,7 +275,8 @@ impl eframe::App for TemplateApp {
                             );
                         }
                     });
-                egui::ComboBox::from_label("Select baudrate")
+                ui.label("Baud rate");
+                egui::ComboBox::from_id_salt(501)
                     .selected_text(format!("{:?}", self.port_settings.baudrate))
                     .show_ui(ui, |ui| {
                         // ui.selectable_value(&mut self.selected, Values::Dos, "First");
@@ -268,6 +288,43 @@ impl eframe::App for TemplateApp {
                             );
                         }
                     });
+                ui.label("Flow control");
+                egui::ComboBox::from_id_salt(502)
+                    .selected_text(self.port_settings.flowcontrol.to_string())
+                    .show_ui(ui, |ui| {
+                        for flow in flow_control_iter() {
+                            ui.selectable_value(
+                                &mut self.port_settings.flowcontrol,
+                                flow,
+                                flow.to_string(),
+                            );
+                        }
+                    });
+                ui.label("Parity");
+                egui::ComboBox::from_id_salt(503)
+                    .selected_text(self.port_settings.parity.to_string())
+                    .show_ui(ui, |ui| {
+                        for parity in parity_iter() {
+                            ui.selectable_value(
+                                &mut self.port_settings.parity,
+                                parity,
+                                parity.to_string(),
+                            );
+                        }
+                    });
+                ui.label("Stop bits");
+                egui::ComboBox::from_id_salt(504)
+                    .selected_text(self.port_settings.stop_bits.to_string())
+                    .show_ui(ui, |ui| {
+                        for stop_bit in stop_bits_iter() {
+                            ui.selectable_value(
+                                &mut self.port_settings.stop_bits,
+                                stop_bit,
+                                stop_bit.to_string(),
+                            );
+                        }
+                    });
+
                 if ui.button(self.buttonportstring.clone()).clicked() {
                     if self.port.is_none() {
                         if self.open_port() {
