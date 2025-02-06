@@ -1,6 +1,6 @@
 use core::f32;
 use egui::Vec2;
-use serialport::{available_ports, SerialPort, SerialPortType};
+use serialport::{available_ports, FlowControl, Parity, SerialPort, SerialPortType, StopBits};
 use std::time::Duration;
 
 struct BaudRate {
@@ -23,6 +23,14 @@ const BAUD_RATES: [BaudRate; 3] = [
     },
 ];
 
+struct PortSettings {
+    port_name: String,
+    baudrate: u32,
+    flowcontrol: FlowControl,
+    parity: Parity,
+    stop_bits: StopBits,
+}
+
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 enum STATES {
     Close,
@@ -36,11 +44,10 @@ pub struct TemplateApp {
     // Example stuff:
     logstring: String,
     #[serde(skip)] // This how you opt-out of serialization of a field
-    selected: String,
+    port_settings: PortSettings,
     port_list: Vec<String>,
     #[serde(skip)] // This how you opt-out of serialization of a field
     port: Option<Box<dyn SerialPort>>,
-    baudratesel: u32,
     buttonportstring: String,
     sendmessagestring: String,
 }
@@ -48,12 +55,16 @@ pub struct TemplateApp {
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
-            // Example stuff:
-            selected: String::new(),
             port_list: Vec::new(),
             logstring: "Starting app\n".to_owned(),
+            port_settings: PortSettings {
+                port_name: String::new(),
+                baudrate: BAUD_RATES[2].numeric_repr,
+                flowcontrol: FlowControl::None,
+                parity: Parity::None,
+                stop_bits: StopBits::One,
+            },
             port: None,
-            baudratesel: 115200,
             buttonportstring: String::from("Open port"),
             sendmessagestring: String::new(),
         }
@@ -75,9 +86,9 @@ impl TemplateApp {
         let mut app: TemplateApp = Default::default();
         app.update_ports();
         if app.port_list.len() > 1 {
-            app.selected = app.port_list[0].clone();
+            app.port_settings.port_name = app.port_list[0].clone();
         } else {
-            app.selected = String::from(TemplateApp::DEFAULT_PORT);
+            app.port_settings.port_name = String::from(TemplateApp::DEFAULT_PORT);
         }
         app
     }
@@ -137,16 +148,25 @@ impl TemplateApp {
 
     fn open_port(&mut self) -> bool {
         let mut state = false;
-        let portopen = serialport::new(self.selected.clone(), self.baudratesel)
-            .timeout(Duration::from_millis(10))
-            .open();
+        let portopen = serialport::new(
+            self.port_settings.port_name.clone(),
+            self.port_settings.baudrate,
+        )
+        .flow_control(self.port_settings.flowcontrol)
+        .parity(self.port_settings.parity)
+        .stop_bits(self.port_settings.stop_bits)
+        .timeout(Duration::from_millis(10))
+        .open();
         match portopen {
             Ok(portopen) => {
                 self.port = Some(portopen);
                 state = true;
             }
             Err(e) => {
-                eprintln!("Failed to open \"{}\". Error: {}", self.selected, e);
+                eprintln!(
+                    "Failed to open \"{}\". Error: {}",
+                    self.port_settings.port_name, e
+                );
             }
         }
         return state;
@@ -219,26 +239,30 @@ impl eframe::App for TemplateApp {
                 if ui.button("Update ports").clicked() {
                     self.update_ports();
                     if self.port_list.len() > 1 {
-                        self.selected = self.port_list[0].clone();
+                        self.port_settings.port_name = self.port_list[0].clone();
                     } else {
-                        self.selected = String::from(TemplateApp::DEFAULT_PORT);
+                        self.port_settings.port_name = String::from(TemplateApp::DEFAULT_PORT);
                     }
                 }
                 egui::ComboBox::from_label("Select port")
-                    .selected_text(format!("{:?}", self.selected))
+                    .selected_text(format!("{:?}", self.port_settings.port_name))
                     .show_ui(ui, |ui| {
                         // ui.selectable_value(&mut self.selected, Values::Dos, "First");
                         for port_name in &self.port_list {
-                            ui.selectable_value(&mut self.selected, port_name.clone(), port_name);
+                            ui.selectable_value(
+                                &mut self.port_settings.port_name,
+                                port_name.clone(),
+                                port_name,
+                            );
                         }
                     });
                 egui::ComboBox::from_label("Select baudrate")
-                    .selected_text(format!("{:?}", self.baudratesel))
+                    .selected_text(format!("{:?}", self.port_settings.baudrate))
                     .show_ui(ui, |ui| {
                         // ui.selectable_value(&mut self.selected, Values::Dos, "First");
                         for baudrate in &BAUD_RATES {
                             ui.selectable_value(
-                                &mut self.baudratesel,
+                                &mut self.port_settings.baudrate,
                                 baudrate.numeric_repr,
                                 baudrate.string_repr,
                             );
