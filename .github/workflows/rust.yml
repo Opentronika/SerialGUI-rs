@@ -1,4 +1,9 @@
-on: [push, pull_request, workflow_dispatch]
+on: 
+  push:
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [created]
 
 name: CI
 
@@ -17,6 +22,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - run: sudo apt-get install libudev-dev pkg-config
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -48,7 +54,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
+      - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libudev-dev pkg-config
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -65,6 +71,7 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt
+      - run: sudo apt-get install libudev-dev pkg-config
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -81,26 +88,11 @@ jobs:
           toolchain: stable
           override: true
           components: clippy
+      - run: sudo apt-get install libudev-dev pkg-config
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: -- -D warnings
-
-  trunk:
-    name: trunk
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.81.0
-          target: wasm32-unknown-unknown
-          override: true
-      - name: Download and install Trunk binary
-        run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
-      - name: Build
-        run: ./trunk build
 
   build:
     runs-on: ${{ matrix.os }}
@@ -133,7 +125,7 @@ jobs:
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable --profile default --target ${{ matrix.TARGET }} -y
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
+      - run: sudo apt-get install libudev-dev pkg-config
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
     - name: Install cross for linux
@@ -160,7 +152,7 @@ jobs:
 
     - uses: svenstaro/upload-release-action@v2
       name: Upload binaries to release
-      if: ${{ github.event_name == 'push' }}
+      if: ${{ github.event_name == 'release' }}
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: eframe_template-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
