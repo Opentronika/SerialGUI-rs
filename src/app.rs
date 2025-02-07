@@ -49,12 +49,6 @@ struct PortSettings {
     stop_bits: StopBits,
 }
 
-#[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
-enum STATES {
-    Close,
-    Open,
-}
-
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -187,7 +181,7 @@ impl TemplateApp {
                 );
             }
         }
-        return state;
+        state
     }
 
     fn close_port(&mut self) {
@@ -345,7 +339,7 @@ impl eframe::App for TemplateApp {
                 if ui.button("Send").clicked() {
                     // self.write_log("send");
                     if let Some(ref mut port) = self.port {
-                        match port.write(self.sendmessagestring.as_bytes()) {
+                        match port.write_all(self.sendmessagestring.as_bytes()) {
                             Ok(_) => eprintln!("Write success"),
                             Err(e) => eprintln!("{:?}", e),
                         }
@@ -358,7 +352,7 @@ impl eframe::App for TemplateApp {
             let size = port.bytes_to_read().unwrap_or(0);
             if size > 0 {
                 let mut serial_buf: Vec<u8> = vec![0; 1000];
-                port.read(&mut serial_buf).unwrap();
+                port.read_exact(&mut serial_buf).unwrap();
                 let message = String::from_utf8(serial_buf[..size as usize].to_vec());
                 self.write_log(message.unwrap_or(String::from("")).as_str());
             }
