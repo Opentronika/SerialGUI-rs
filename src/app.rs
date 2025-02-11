@@ -229,7 +229,7 @@ impl eframe::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let sizeavailable = ui.available_size();
-            let sizetext = Vec2::new(sizeavailable.x, sizeavailable.y * 0.90);
+            let sizetext = Vec2::new(sizeavailable.x, sizeavailable.y * 0.85);
             // The central panel the region left after adding TopPanel's and SidePanel's
             egui::ScrollArea::vertical()
                 .max_height(sizetext.y)
