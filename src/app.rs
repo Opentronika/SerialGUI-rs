@@ -1,7 +1,12 @@
 use core::f32;
+use std::io::Write;
 use egui::Vec2;
 use serialport::{available_ports, FlowControl, Parity, SerialPort, SerialPortType, StopBits};
+use std::fs::File;
 use std::time::Duration;
+use guistrings::GuiStrings;
+
+use crate::guistrings;
 
 struct BaudRate {
     string_repr: &'static str,
@@ -22,6 +27,9 @@ const BAUD_RATES: [BaudRate; 3] = [
         numeric_repr: 115200,
     },
 ];
+
+const LOG_FILE_DEFAULT_NAME: &str = "LogFile";
+const LOG_FILE_DEFAULT_EXTENTION: &str = ".txt";
 
 fn flow_control_iter() -> impl Iterator<Item = FlowControl> {
     [
@@ -62,6 +70,10 @@ pub struct TemplateApp {
     port: Option<Box<dyn SerialPort>>,
     buttonportstring: String,
     sendmessagestring: String,
+    filelogpath: String,
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    filelog: Option<File>,
+    logfilebutton:String,
 }
 
 impl Default for TemplateApp {
@@ -79,6 +91,9 @@ impl Default for TemplateApp {
             port: None,
             buttonportstring: String::from("Open port"),
             sendmessagestring: String::new(),
+            filelogpath: String::from(LOG_FILE_DEFAULT_NAME)+LOG_FILE_DEFAULT_EXTENTION,
+            filelog: None,
+            logfilebutton: String::from(GuiStrings::STARTLOGFILE),
         }
     }
 }
@@ -193,7 +208,13 @@ impl TemplateApp {
     fn write_log(&mut self, message: &str) {
         eprintln!("{}", message);
         self.logstring += message;
-        self.logstring += "\n";
+        if let Some(ref mut file) = self.filelog {
+            match file.write_all(message.as_bytes()) {
+                Ok(_) => {},
+                Err(e) => eprintln!("{:?}", e),
+            }
+        }
+        // self.logstring += "\n";
     }
 }
 
@@ -330,6 +351,27 @@ impl eframe::App for TemplateApp {
                     }
                 }
             });
+            ui.horizontal_wrapped(|ui| {
+                ui.text_edit_singleline(&mut self.filelogpath.clone());
+                if ui.button(self.logfilebutton.clone()).clicked() {
+                    if self.filelog.is_none() {
+                        let openfile = File::create(self.filelogpath.clone());
+                        match openfile {
+                            Ok(file) => {
+                                self.filelog = Some(file);
+                                self.logfilebutton = String::from(GuiStrings::STOPLOGFILE);
+                            }
+                            Err(e) => {
+                                self.write_log("Open file failed \n");
+                                eprintln!("{}", e);
+                            }
+                        }
+                    } else {
+                                self.logfilebutton = String::from(GuiStrings::STARTLOGFILE);
+                                self.filelog = None;
+                    }
+                }
+            });
             ui.horizontal(|ui| {
                 let sizesend = Vec2::new(sizeavailable.x * 0.9, 20.0);
                 ui.add_sized(
@@ -351,7 +393,7 @@ impl eframe::App for TemplateApp {
         if let Some(ref mut port) = self.port {
             let size = port.bytes_to_read().unwrap_or(0);
             if size > 0 {
-                let mut serial_buf: Vec<u8> = vec![0; 1000];
+                let mut serial_buf: Vec<u8> = vec![0; size as usize];
                 port.read_exact(&mut serial_buf).unwrap();
                 let message = String::from_utf8(serial_buf[..size as usize].to_vec());
                 self.write_log(message.unwrap_or(String::from("")).as_str());
