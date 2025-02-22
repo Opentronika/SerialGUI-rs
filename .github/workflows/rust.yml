@@ -128,8 +128,8 @@ jobs:
     - name: Install system dependencies
       if: contains(matrix.TARGET, 'linux')
       run: |
-        sudo dpkg --add-architecture armhf
         sudo apt-get update
+        sudo dpkg --add-architecture armhf
         sudo apt-get install -y build-essential curl git libudev-dev pkg-config gcc-arm-linux-gnueabihf
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
