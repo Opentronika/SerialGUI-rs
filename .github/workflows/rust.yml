@@ -100,21 +100,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - os: macos-latest
-          TARGET: aarch64-apple-darwin
+        # - os: macos-latest
+        #   TARGET: aarch64-apple-darwin
 
         - os: ubuntu-latest
           TARGET: aarch64-unknown-linux-gnu
 
-        - os: ubuntu-latest
-          TARGET: armv7-unknown-linux-gnueabihf
+        # - os: ubuntu-latest
+        #   TARGET: armv7-unknown-linux-gnueabihf
 
-        - os: ubuntu-latest
-          TARGET: x86_64-unknown-linux-gnu
+        # - os: ubuntu-latest
+        #   TARGET: x86_64-unknown-linux-gnu
 
-        - os: windows-latest
-          TARGET: x86_64-pc-windows-msvc
-          EXTENSION: .exe
+        # - os: windows-latest
+        #   TARGET: x86_64-pc-windows-msvc
+        #   EXTENSION: .exe
 
     steps:
     - name: Building ${{ matrix.TARGET }}
@@ -127,16 +127,23 @@ jobs:
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
-    - name: Install cross for linux
-      if: contains(matrix.TARGET, 'linux')
-      run: |
-        cargo install cross --git https://github.com/cross-rs/cross --rev 1b8cf50d20180c1a394099e608141480f934b7f7
     - name: Install system dependencies
       if: contains(matrix.TARGET, 'linux')
       run: |
         sudo apt-get update
-        sudo dpkg --add-architecture armhf
-        sudo apt-get install -y build-essential curl git libudev-dev pkg-config gcc-arm-linux-gnueabihf
+        sudo apt-get install -y build-essential curl git libudev-dev pkg-config
+        
+    - name: Install cross for linux
+      if: contains(matrix.TARGET, 'linux')
+      run: |
+        cargo install cross --git https://github.com/cross-rs/cross --rev 1b8cf50d20180c1a394099e608141480f934b7f7
+
+    - name: Set up pkg-config for cross-compilation
+      if: contains(matrix.TARGET, 'linux')
+      run: |
+        echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+        echo "PKG_CONFIG_SYSROOT_DIR=/" >> $GITHUB_ENV
+        echo "PKG_CONFIG_PATH=/usr/lib/$(gcc -dumpmachine)/pkgconfig" >> $GITHUB_ENV
 
     - name: Install cross for mac and windows
       if: ${{ !contains(matrix.TARGET, 'linux') }}
