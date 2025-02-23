@@ -125,18 +125,18 @@ jobs:
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable --profile default --target ${{ matrix.TARGET }} -y
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-    - name: Install system dependencies
-      if: contains(matrix.TARGET, 'linux')
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential curl git pkg-config libudev-dev
-        echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
     # For linux, it's necessary to use cross from the git repository to avoid glibc problems
     # Ref: https://github.com/cross-rs/cross/issues/1510
     - name: Install cross for linux
       if: contains(matrix.TARGET, 'linux')
       run: |
         cargo install cross --git https://github.com/cross-rs/cross --rev 1b8cf50d20180c1a394099e608141480f934b7f7
+    - name: Install system dependencies
+      if: contains(matrix.TARGET, 'linux')
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential curl git pkg-config libudev-dev
+        echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
 
     - name: Install cross for mac and windows
       if: ${{ !contains(matrix.TARGET, 'linux') }}
