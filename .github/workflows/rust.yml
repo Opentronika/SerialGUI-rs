@@ -105,9 +105,11 @@ jobs:
 
         - os: ubuntu-latest
           TARGET: aarch64-unknown-linux-gnu
+          EXTRAPACKAGES: gcc-aarch64-linux-gnu libc6-dev-arm64-cross
 
         - os: ubuntu-latest
           TARGET: armv7-unknown-linux-gnueabihf
+          EXTRAPACKAGES: gcc-armv7-linux-gnu libc6-dev-arm64-cross
 
         - os: ubuntu-latest
           TARGET: x86_64-unknown-linux-gnu
@@ -126,7 +128,7 @@ jobs:
       run: |
         sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/' /etc/apt/sources.list
         sudo apt-get -qq update
-        sudo apt-get -qq -y install build-essential curl git pkg-config libudev-dev
+        sudo apt-get -qq -y install build-essential curl git pkg-config libudev-dev ${{matrix.EXTRAPACKAGES}}
         
     - name: Install toolchain
       uses: dtolnay/rust-toolchain@stable
@@ -139,10 +141,10 @@ jobs:
 
     - name: Build
       run: |
-        cargo build  --verbose --release --target=${{ matrix.TARGET }}
+        cargo build --release --target=${{ matrix.TARGET }}
 
     - name: Rename
-      run: cp target/${{ matrix.TARGET }}/release/SerialGUI_rs${{ matrix.EXTENSION }} SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+      run: cp target/${{ matrix.TARGET }}/release/serialgui_rs${{ matrix.EXTENSION }} SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
 
     - uses: actions/upload-artifact@master
       with:
