@@ -1,10 +1,12 @@
 use core::f32;
 use std::io::Write;
-use egui::Vec2;
+use egui::{ Vec2};
 use serialport::{available_ports, FlowControl, Parity, SerialPort, SerialPortType, StopBits};
 use std::fs::File;
 use std::time::Duration;
 use guistrings::GuiStrings;
+use std::env;
+use chrono::prelude::*;
 
 use crate::guistrings;
 
@@ -111,6 +113,8 @@ impl TemplateApp {
         //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         // }
         let mut app: TemplateApp = Default::default();
+        
+        app.filelogpath=app.generate_filename();
         app.update_ports();
         if app.port_list.len() > 1 {
             app.port_settings.port_name = app.port_list[0].clone();
@@ -118,6 +122,26 @@ impl TemplateApp {
             app.port_settings.port_name = String::from(TemplateApp::DEFAULT_PORT);
         }
         app
+    }
+
+    fn generate_filename(&self) -> String {
+        let mut filename = String::from("");
+        match env::current_dir() {
+            Ok(_dir)=>{
+                eprintln!("{}",_dir.display()); 
+                filename += _dir.display().to_string().as_str(); 
+                filename += "/";
+                filename += LOG_FILE_DEFAULT_NAME;
+                filename += "_";
+                filename += chrono::Local::now().format("%Y-%m-%d_%H-%M-%S").to_string().as_str();
+                filename += LOG_FILE_DEFAULT_EXTENTION;
+            }
+            Err(_)=>{
+                filename= String::from(LOG_FILE_DEFAULT_NAME)+LOG_FILE_DEFAULT_EXTENTION;
+            }
+        }
+        filename
+     
     }
 
     fn update_ports(&mut self) {
@@ -352,7 +376,8 @@ impl eframe::App for TemplateApp {
                 }
             });
             ui.horizontal_wrapped(|ui| {
-                ui.text_edit_singleline(&mut self.filelogpath.clone());
+                ui.add_sized(Vec2::new(500.0, 20.0), egui::TextEdit::singleline(&mut self.filelogpath.clone()));
+                // ui.add(egui::TextEdit::singleline(&mut self.filelogpath.clone()));
                 if ui.button(self.logfilebutton.clone()).clicked() {
                     if self.filelog.is_none() {
                         let openfile = File::create(self.filelogpath.clone());
@@ -369,6 +394,7 @@ impl eframe::App for TemplateApp {
                     } else {
                                 self.logfilebutton = String::from(GuiStrings::STARTLOGFILE);
                                 self.filelog = None;
+                                self.filelogpath = self.generate_filename();
                     }
                 }
             });
