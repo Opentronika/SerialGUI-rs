@@ -1,12 +1,12 @@
+use chrono::prelude::Local;
 use core::f32;
-use std::io::Write;
-use egui::{ Vec2};
-use serialport::{available_ports, FlowControl, Parity, SerialPort, SerialPortType, StopBits};
-use std::fs::File;
-use std::time::Duration;
+use egui::Vec2;
 use guistrings::GuiStrings;
+use serialport::{available_ports, FlowControl, Parity, SerialPort, SerialPortType, StopBits};
 use std::env;
-use chrono::prelude::*;
+use std::fs::File;
+use std::io::Write;
+use std::time::Duration;
 
 use crate::guistrings;
 
@@ -75,7 +75,7 @@ pub struct TemplateApp {
     filelogpath: String,
     #[serde(skip)] // This how you opt-out of serialization of a field
     filelog: Option<File>,
-    logfilebutton:String,
+    logfilebutton: String,
 }
 
 impl Default for TemplateApp {
@@ -93,7 +93,7 @@ impl Default for TemplateApp {
             port: None,
             buttonportstring: String::from("Open port"),
             sendmessagestring: String::new(),
-            filelogpath: String::from(LOG_FILE_DEFAULT_NAME)+LOG_FILE_DEFAULT_EXTENTION,
+            filelogpath: String::from(LOG_FILE_DEFAULT_NAME) + LOG_FILE_DEFAULT_EXTENTION,
             filelog: None,
             logfilebutton: String::from(GuiStrings::STARTLOGFILE),
         }
@@ -113,8 +113,8 @@ impl TemplateApp {
         //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         // }
         let mut app: TemplateApp = Default::default();
-        
-        app.filelogpath=app.generate_filename();
+
+        app.filelogpath = app.generate_filename();
         app.update_ports();
         if app.port_list.len() > 1 {
             app.port_settings.port_name = app.port_list[0].clone();
@@ -127,21 +127,23 @@ impl TemplateApp {
     fn generate_filename(&self) -> String {
         let mut filename = String::from("");
         match env::current_dir() {
-            Ok(_dir)=>{
-                eprintln!("{}",_dir.display()); 
-                filename += _dir.display().to_string().as_str(); 
+            Ok(_dir) => {
+                eprintln!("{}", _dir.display());
+                filename += _dir.display().to_string().as_str();
                 filename += "/";
                 filename += LOG_FILE_DEFAULT_NAME;
                 filename += "_";
-                filename += chrono::Local::now().format("%Y-%m-%d_%H-%M-%S").to_string().as_str();
+                filename += Local::now()
+                    .format("%Y-%m-%d_%H-%M-%S")
+                    .to_string()
+                    .as_str();
                 filename += LOG_FILE_DEFAULT_EXTENTION;
             }
-            Err(_)=>{
-                filename= String::from(LOG_FILE_DEFAULT_NAME)+LOG_FILE_DEFAULT_EXTENTION;
+            Err(_) => {
+                filename = String::from(LOG_FILE_DEFAULT_NAME) + LOG_FILE_DEFAULT_EXTENTION;
             }
         }
         filename
-     
     }
 
     fn update_ports(&mut self) {
@@ -234,7 +236,7 @@ impl TemplateApp {
         self.logstring += message;
         if let Some(ref mut file) = self.filelog {
             match file.write_all(message.as_bytes()) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => eprintln!("{:?}", e),
             }
         }
@@ -376,7 +378,10 @@ impl eframe::App for TemplateApp {
                 }
             });
             ui.horizontal_wrapped(|ui| {
-                ui.add_sized(Vec2::new(500.0, 20.0), egui::TextEdit::singleline(&mut self.filelogpath.clone()));
+                ui.add_sized(
+                    Vec2::new(500.0, 20.0),
+                    egui::TextEdit::singleline(&mut self.filelogpath.clone()),
+                );
                 // ui.add(egui::TextEdit::singleline(&mut self.filelogpath.clone()));
                 if ui.button(self.logfilebutton.clone()).clicked() {
                     if self.filelog.is_none() {
@@ -392,9 +397,9 @@ impl eframe::App for TemplateApp {
                             }
                         }
                     } else {
-                                self.logfilebutton = String::from(GuiStrings::STARTLOGFILE);
-                                self.filelog = None;
-                                self.filelogpath = self.generate_filename();
+                        self.logfilebutton = String::from(GuiStrings::STARTLOGFILE);
+                        self.filelog = None;
+                        self.filelogpath = self.generate_filename();
                     }
                 }
             });
