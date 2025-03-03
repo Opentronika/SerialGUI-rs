@@ -2,4 +2,5 @@
 
 mod app;
 mod guistrings;
+mod portsettings;
 pub use app::TemplateApp;
