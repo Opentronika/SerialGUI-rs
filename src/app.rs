@@ -58,6 +58,7 @@ fn stop_bits_iter() -> impl Iterator<Item = StopBits> {
 enum EPortState {
     Open,
     Closed,
+    Opening,
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -222,13 +223,17 @@ impl TemplateApp {
     }
 
     fn open_port(&mut self, ctx: &egui::Context) -> bool {
+        {
+            *self.port_state.lock().unwrap() = EPortState::Opening;
+        }
         let port_settings_clone = self.port_settings.clone();
         let port_state_clone = Arc::clone(&self.port_state);
         let context_clone = ctx.clone();
         let tx_to_gui_clone = self.tx_to_gui.clone();
+
         let handle = thread::spawn(move || {
             // some work here
-            let mut port: Option<Box<dyn SerialPort>> = None;
+            let mut port: Option<Box<dyn SerialPort>>;
             {
                 let mut port_state = port_state_clone.lock().unwrap();
                 let portopen = serialport::new(
@@ -251,13 +256,11 @@ impl TemplateApp {
                             "Failed to open \"{}\". Error: {}",
                             port_settings_clone.port_name, e
                         );
+                        *port_state = EPortState::Closed;
+                        context_clone.request_repaint();
+                        return;
                     }
                 }
-            }
-
-            if port.is_none() {
-                context_clone.request_repaint();
-                return;
             }
 
             while *port_state_clone.lock().unwrap() == EPortState::Open {
@@ -486,11 +489,12 @@ impl eframe::App for TemplateApp {
             });
         });
 
-        // if *self.port_state.lock().unwrap() == ePortState::Closed && self.port_thread.is_some() {
-        //     self.buttonportstring = "Open port".to_string();
-        //     eprintln!("Port closed by ui");
-        //     self.port_thread = None;
-        // }
+        if *self.port_state.lock().unwrap() == EPortState::Closed && self.port_thread.is_some() {
+            self.buttonportstring = "Open port".to_string();
+            eprintln!("Port closed by ui");
+            self.close_port();
+            // self.port_thread = None;
+        }
 
         if let Some(ref mut rx) = self.rx_from_serial {
             if let Ok(message) = rx.try_recv() {
@@ -499,15 +503,5 @@ impl eframe::App for TemplateApp {
             }
             // self.write_log(message.as_str());
         }
-
-        // if let Some(ref mut port) = self.port {
-        //     let size = port.bytes_to_read().unwrap_or(0);
-        //     if size > 0 {
-        //         let mut serial_buf: Vec<u8> = vec![0; size as usize];
-        //         port.read_exact(&mut serial_buf).unwrap();
-        //         let message = String::from_utf8(serial_buf[..size as usize].to_vec());
-        //         self.write_log(message.unwrap_or(String::from("")).as_str());
-        //     }
-        // }
     }
 }
