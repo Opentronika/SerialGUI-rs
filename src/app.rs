@@ -33,6 +33,7 @@ const BAUD_RATES: [BaudRate; 3] = [
     },
 ];
 
+const MAX_LOG_STRING_LENGTH: usize = 30000;
 const LOG_FILE_DEFAULT_NAME: &str = "LogFile";
 const LOG_FILE_DEFAULT_EXTENTION: &str = ".txt";
 
@@ -313,6 +314,10 @@ impl TemplateApp {
     fn write_log(&mut self, message: &str) {
         eprintln!("{}", message);
         self.logstring += message;
+        if self.logstring.len() > MAX_LOG_STRING_LENGTH {
+            let excess_len = self.logstring.len() - MAX_LOG_STRING_LENGTH;
+            self.logstring.drain(0..excess_len);
+        }
         if let Some(ref mut file) = self.filelog {
             match file.write_all(message.as_bytes()) {
                 Ok(_) => {}
