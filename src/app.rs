@@ -138,12 +138,9 @@ impl TemplateApp {
         } else {
             app.port_settings.port_name = String::from(TemplateApp::DEFAULT_PORT);
         }
-        let (tx_to_serial, rx_from_gui) = mpsc::channel();
         let (tx_to_gui, rx_from_serial) = mpsc::channel();
-        app.tx_to_serial = Some(tx_to_serial);
         app.rx_from_serial = Some(rx_from_serial);
         app.tx_to_gui = Some(tx_to_gui);
-        app.rx_from_gui = Some(rx_from_gui);
         app
     }
 
@@ -230,6 +227,9 @@ impl TemplateApp {
         let port_state_clone = Arc::clone(&self.port_state);
         let context_clone = ctx.clone();
         let tx_to_gui_clone = self.tx_to_gui.clone();
+        let (tx_to_serial, rx_from_gui) = mpsc::channel();
+        self.tx_to_serial = Some(tx_to_serial);
+        // self.rx_from_gui = Some(rx_from_gui);
 
         let handle = thread::spawn(move || {
             // some work here
@@ -278,6 +278,17 @@ impl TemplateApp {
                             .unwrap();
                         context_clone.request_repaint();
                     }
+                }
+
+                if let Ok(message) = rx_from_gui.try_recv() {
+                    // self.write_log(message.as_str());
+                    if let Some(ref mut port_instance) = port {
+                        match port_instance.write_all(message.as_bytes()) {
+                            Ok(_) => eprintln!("Write success"),
+                            Err(e) => eprintln!("{:?}", e),
+                        }
+                    }
+                    context_clone.request_repaint();
                 }
             }
         });
@@ -478,13 +489,9 @@ impl eframe::App for TemplateApp {
                     egui::TextEdit::singleline(&mut self.sendmessagestring),
                 );
                 if ui.button("Send").clicked() {
-                    // self.write_log("send");
-                    // if let Some(ref mut port) = self.port {
-                    //     match port.write_all(self.sendmessagestring.as_bytes()) {
-                    //         Ok(_) => eprintln!("Write success"),
-                    //         Err(e) => eprintln!("{:?}", e),
-                    //     }
-                    // }
+                    if let Some(ref tx) = self.tx_to_serial {
+                        tx.send(self.sendmessagestring.clone()).unwrap();
+                    }
                 }
             });
         });
@@ -493,7 +500,6 @@ impl eframe::App for TemplateApp {
             self.buttonportstring = "Open port".to_string();
             eprintln!("Port closed by ui");
             self.close_port();
-            // self.port_thread = None;
         }
 
         if let Some(ref mut rx) = self.rx_from_serial {
@@ -501,7 +507,6 @@ impl eframe::App for TemplateApp {
                 self.write_log(message.as_str());
                 ctx.request_repaint();
             }
-            // self.write_log(message.as_str());
         }
     }
 }
