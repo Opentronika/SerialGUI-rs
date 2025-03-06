@@ -103,7 +103,7 @@ jobs:
         - os: macos-latest
           TARGET: aarch64-apple-darwin
 
-        - os: macos-latest
+        - os: macos-13
           TARGET: x86_64-apple-darwin
 
         - os: ubuntu-latest
