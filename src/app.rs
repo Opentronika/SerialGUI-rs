@@ -173,7 +173,7 @@ impl TemplateApp {
                 // Let's output ports in a stable order to facilitate comparing the output from
                 // different runs (on different platforms, with different features, ...).
                 ports.sort_by_key(|i| i.port_name.clone());
-
+                self.port_list.clear();
                 match ports.len() {
                     0 => println!("No ports found."),
                     1 => println!("Found 1 port:"),
@@ -381,7 +381,7 @@ impl eframe::App for TemplateApp {
             ui.horizontal_wrapped(|ui| {
                 if ui.button("Update ports").clicked() {
                     self.update_ports();
-                    if self.port_list.len() > 1 {
+                    if self.port_list.len() > 0 {
                         self.port_settings.port_name = self.port_list[0].clone();
                     } else {
                         self.port_settings.port_name = String::from(TemplateApp::DEFAULT_PORT);
