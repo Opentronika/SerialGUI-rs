@@ -134,7 +134,7 @@ impl TemplateApp {
 
         app.filelogpath = app.generate_filename();
         app.update_ports();
-        if app.port_list.len() > 1 {
+        if !app.port_list.is_empty() {
             app.port_settings.port_name = app.port_list[0].clone();
         } else {
             app.port_settings.port_name = String::from(TemplateApp::DEFAULT_PORT);
