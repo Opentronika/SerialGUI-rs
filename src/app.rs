@@ -381,7 +381,7 @@ impl eframe::App for TemplateApp {
             ui.horizontal_wrapped(|ui| {
                 if ui.button("Update ports").clicked() {
                     self.update_ports();
-                    if self.port_list.len() > 0 {
+                    if !self.port_list.is_empty() {
                         self.port_settings.port_name = self.port_list[0].clone();
                     } else {
                         self.port_settings.port_name = String::from(TemplateApp::DEFAULT_PORT);

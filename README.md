@@ -39,13 +39,28 @@ A lightweight serial terminal monitor written in Rust
 
 Thank you for considering contributing to **SerialGUI-Rs**! Here are some basic rules for contributing to the project, following the guidelines of GNU projects:
 
-1. **Clean and documented code**: Ensure your code is well-documented and follows the project's style conventions.
-2. **Clear commits**: Make small, clear commits with descriptive messages.
-3. **Pull requests**: Submit your changes through pull requests and make sure your code passes all tests before submitting.
-4. **Open discussion**: If you have any ideas or suggestions, feel free to open an issue to discuss it with the community.
+1. **Install git hooks**
+```sh
+./setup-hooks.sh
+```
+
+2. **Clean and documented code**: Ensure your code is well-documented and follows the project's style conventions.
+3. **Clear commits**: Make small, clear commits with descriptive messages.
+4. **Pull requests**: Submit your changes through pull requests and make sure your code passes all tests before submitting.
+5. **Open discussion**: If you have any ideas or suggestions, feel free to open an issue to discuss it with the community.
 
 For more details, check the GNU Contribution Guide.
 
-## Author
+## Contributors
 
-**LutGaru**
+
+<!-- Copy-paste in your Readme.md file -->
+
+<a href="https://github.com/Opentronika/SerialGUI-rs/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Opentronika/SerialGUI-rs" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
+
+
+
