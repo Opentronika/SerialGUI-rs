@@ -355,6 +355,9 @@ impl eframe::App for TemplateApp {
                 }
 
                 egui::widgets::global_theme_preference_buttons(ui);
+                if ui.button("Clear output").clicked() {
+                    self.logstring.clear();
+                }
             });
         });
 
