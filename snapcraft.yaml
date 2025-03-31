@@ -1,0 +1,19 @@
+name: serialgui-rs
+version: git
+summary: A lightweight serial terminal monitor written in Rust
+description: |
+  SerialGUI-Rs is a cross-platform graphical serial monitor application that uses the 
+  serialport-rs library as its backend and eframe for the graphical interface.
+
+base: core22
+confinement: devmode
+
+
+parts:
+  Serial-rs:
+    plugin: rust
+    source: .
+
+apps:
+  Serial-rs:
+    command: bin/serialguirs
