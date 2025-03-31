@@ -16,4 +16,4 @@ parts:
 
 apps:
   Serial-rs:
-    command: bin/serialguirs
+    command: bin/serialgui_rs
