@@ -10,12 +10,12 @@ confinement: devmode
 
 
 parts:
-  Serial-rs:
+  SerialGUI-rs:
     plugin: rust
     source: .
 
 apps:
-  Serial-rs:
+  SerialGUI-rs:
 
     command: bin/serialgui_rs
     plugs:
