@@ -8,6 +8,12 @@ fn main() -> eframe::Result {
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
+            .with_icon(
+                eframe::icon_data::from_png_bytes(
+                    &include_bytes!("../assets/SerialGUI-rs-logo.png")[..],
+                )
+                .expect("Failed to load icon"),
+            )
             .with_inner_size([1050.0, 500.0])
             .with_min_inner_size([1050.0, 500.0]),
         ..Default::default()
