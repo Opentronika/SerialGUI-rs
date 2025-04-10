@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=SerialGUI-Rs
+Comment=A lightweight serial terminal monitor
+Exec=serialgui-rs.SerialGUI-rs
+Icon=${SNAP}/meta/gui/serialgui-rs.png
+Terminal=false
+Type=Application
+Categories=Utility;Communication;
