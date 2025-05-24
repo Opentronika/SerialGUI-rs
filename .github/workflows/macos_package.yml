@@ -86,7 +86,7 @@ jobs:
                          -ov -format UDZO "$DMG_NAME"
 
       - name: Upload DMG
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           # Dynamic artifact name to differentiate between architectures
           name: ${{ github.job }}-${{ matrix.ARCH_SUFFIX }}

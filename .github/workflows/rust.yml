@@ -103,12 +103,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            TARGET: aarch64-apple-darwin
-
-          - os: macos-13
-            TARGET: x86_64-apple-darwin
-
           - os: ubuntu-latest
             TARGET: x86_64-unknown-linux-gnu
 
@@ -145,7 +139,7 @@ jobs:
       - name: Rename
         run: cp target/${{ matrix.TARGET }}/release/serialgui_rs${{ matrix.EXTENSION }} SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
           path: SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
