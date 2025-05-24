@@ -23,6 +23,8 @@ jobs:
     env:
       RUSTFLAGS: -D warnings
       RUSTDOCFLAGS: -D warnings
+      # Set the minimum macOS deployment target for the compiled binary
+      MACOSX_DEPLOYMENT_TARGET: '12.0'
 
     steps:
       - uses: actions/checkout@v4
