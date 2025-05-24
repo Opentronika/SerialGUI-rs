@@ -5,21 +5,21 @@ on:
 
 jobs:
   package-macos:
-    # El runner se selecciona de la matriz
+    # The runner is selected from the matrix
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Configuración para arquitectura ARM (Apple Silicon)
+          # Configuration for ARM architecture (Apple Silicon)
           - os: macos-latest
             TARGET: aarch64-apple-darwin
-            ARCH_SUFFIX: arm64 # Sufijo para nombres de archivos, si es necesario
+            ARCH_SUFFIX: arm64 # Suffix for file names, if needed
 
-          # Configuración para arquitectura Intel
-          - os: macos-13 # macos-13 es una buena opción para x86_64, macos-latest puede ser ARM
+          # Configuration for Intel architecture
+          - os: macos-13 # macos-13 is a good option for x86_64, macos-latest might be ARM
             TARGET: x86_64-apple-darwin
-            ARCH_SUFFIX: x64 # Sufijo para nombres de archivos, si es necesario
+            ARCH_SUFFIX: x64 # Suffix for file names, if needed
     env:
       RUSTFLAGS: -D warnings
       RUSTDOCFLAGS: -D warnings
@@ -31,72 +31,56 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          # Usar la variable TARGET de la matriz para instalar el toolchain correcto
+          # Use the TARGET variable from the matrix to install the correct toolchain
           target: ${{ matrix.TARGET }}
 
       - name: Build release
         run: |
-          # Usar la variable TARGET de la matriz para construir el binario correcto
+          # Use the TARGET variable from the matrix to build the correct binary
           cargo build --release --target=${{ matrix.TARGET }}
 
       - name: Package .app bundle
         run: |
           APP_NAME="SerialGUI_rs"
-          # Obtener el TARGET de la variable de entorno de GitHub Actions
+          # Get the TARGET from the GitHub Actions environment variable
           CURRENT_TARGET="${{ matrix.TARGET }}"
           BIN_PATH="target/$CURRENT_TARGET/release/$APP_NAME"
-          APP_BUNDLE="$APP_NAME.app" # El nombre del bundle es el mismo para ambas arquitecturas
+          APP_BUNDLE="$APP_NAME.app" # The bundle name is the same for both architectures
 
-          echo "Creando el bundle .app para la arquitectura: $CURRENT_TARGET"
+          echo "Creating the .app bundle for architecture: $CURRENT_TARGET"
 
           mkdir -p "$APP_BUNDLE/Contents/MacOS"
           mkdir -p "$APP_BUNDLE/Contents/Resources"
 
-          # Copiar el binario
+          # Copy the binary
           cp "$BIN_PATH" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
-          # Copiar el icono (asegúrate de que 'assets/SerialGUI-rs-logo.icns' exista)
+          # Copy the icon (ensure 'assets/SerialGUI-rs-logo.icns' exists)
           cp assets/SerialGUI-rs-logo.icns "$APP_BUNDLE/Contents/Resources/$APP_NAME.icns"
 
-          # Crear Info.plist
-          # Puedes añadir CFBundleDisplayName si quieres un nombre más amigable en el Finder
-          cat > "$APP_BUNDLE/Contents/Info.plist" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>CFBundleExecutable</key>
-  <string>$APP_NAME</string>
-  <key>CFBundleIdentifier</key>
-  <string>com.example.$APP_NAME</string>
-  <key>CFBundleName</key>
-  <string>$APP_NAME</string>
-  <key>CFBundleVersion</key>
-  <string>1.0</string>
-  <key>CFBundlePackageType</key>
-  <string>APPL</string>
-  <key>CFBundleIconFile</key>
-  <string>$APP_NAME.icns</string>
-  <key>LSArchitectureForRequiredSystem</key>
-  <string>$(echo $CURRENT_TARGET | cut -d'-' -f1)</string>
-</dict>
-</plist>
-EOF
-          # Es buena práctica establecer permisos ejecutables para el binario
+          # Copy the Info.plist from a template and replace placeholders
+          # Make sure to create the file 'assets/Info.plist.template' in your repository
+          cp assets/Info.plist.template "$APP_BUNDLE/Contents/Info.plist"
+          # Replace __APP_NAME__ with the actual application name
+          sed -i '' "s/__APP_NAME__/$APP_NAME/g" "$APP_BUNDLE/Contents/Info.plist"
+          # Replace __ARCH_TARGET__ with the architecture (e.g., arm64 or x86)
+          sed -i '' "s/__ARCH_TARGET__/$(echo $CURRENT_TARGET | cut -d'-' -f1)/g" "$APP_BUNDLE/Contents/Info.plist"
+
+          # It's good practice to set executable permissions for the binary
           chmod +x "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
       - name: Create DMG
         run: |
           APP_NAME="SerialGUI_rs"
           APP_BUNDLE="$APP_NAME.app"
-          DMG_NAME="${APP_NAME}-${{ matrix.ARCH_SUFFIX }}.dmg" # Nombre de DMG dinámico
-          VOL_NAME="${APP_NAME} (${{ matrix.ARCH_SUFFIX }})" # Nombre de volumen dinámico
+          DMG_NAME="${APP_NAME}-${{ matrix.ARCH_SUFFIX }}.dmg" # Dynamic DMG name
+          VOL_NAME="${APP_NAME} (${{ matrix.ARCH_SUFFIX }})" # Dynamic volume name
 
           mkdir dmg_folder
-          # Mover el bundle .app creado en el paso anterior a la carpeta del DMG
+          # Move the .app bundle created in the previous step to the DMG folder
           mv "$APP_BUNDLE" dmg_folder/
 
-          echo "Creando el archivo DMG: $DMG_NAME"
+          echo "Creating the DMG file: $DMG_NAME"
           hdiutil create -volname "$VOL_NAME" \
                          -srcfolder dmg_folder \
                          -ov -format UDZO "$DMG_NAME"
@@ -104,7 +88,7 @@ EOF
       - name: Upload DMG
         uses: actions/upload-artifact@v3
         with:
-          # Nombre del artefacto dinámico para diferenciar entre arquitecturas
+          # Dynamic artifact name to differentiate between architectures
           name: ${{ github.job }}-${{ matrix.ARCH_SUFFIX }}
-          # Ruta del archivo DMG dinámico
+          # Dynamic DMG file path
           path: SerialGUI_rs-${{ matrix.ARCH_SUFFIX }}.dmg
