@@ -103,59 +103,64 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - os: macos-latest
-          TARGET: aarch64-apple-darwin
+          - os: macos-latest
+            TARGET: aarch64-apple-darwin
 
-        - os: macos-13
-          TARGET: x86_64-apple-darwin
+          - os: macos-13
+            TARGET: x86_64-apple-darwin
 
-        - os: ubuntu-latest
-          TARGET: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            TARGET: x86_64-unknown-linux-gnu
 
-        - os: windows-latest
-          TARGET: x86_64-pc-windows-msvc
-          EXTENSION: .exe
+          - os: windows-latest
+            TARGET: x86_64-pc-windows-msvc
+            EXTENSION: .exe
 
     steps:
-    - name: Building ${{ matrix.TARGET }}
-      run: echo "${{ matrix.TARGET }}"
+      - name: Building ${{ matrix.TARGET }}
+        run: echo "${{ matrix.TARGET }}"
 
-    - uses: actions/checkout@master
-    - name: Install system dependencies
-      if: contains(matrix.TARGET, 'linux')
-      run: |
-        sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/' /etc/apt/sources.list
-        sudo apt-get -qq update
-        sudo apt-get -qq -y install build-essential curl git pkg-config libudev-dev ${{matrix.EXTRAPACKAGES}}
-        
-    - name: Install toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        target: ${{ matrix.TARGET }}
-        toolchain: stable
+      - uses: actions/checkout@v4
 
-    - name: Rust-cache
-      uses: Swatinem/rust-cache@v2
+      - name: Install system dependencies
+        if: contains(matrix.TARGET, 'linux')
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/' /etc/apt/sources.list
+          sudo apt-get -qq update
+          sudo apt-get -qq -y install build-essential curl git pkg-config libudev-dev ${{ matrix.EXTRAPACKAGES }}
 
-    - name: Build
-      run: |
-        cargo build --release --target=${{ matrix.TARGET }}
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.TARGET }}
+          toolchain: stable
 
-    - name: Rename
-      run: cp target/${{ matrix.TARGET }}/release/serialgui_rs${{ matrix.EXTENSION }} SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+      - name: Rust-cache
+        uses: Swatinem/rust-cache@v2
 
-    - uses: actions/upload-artifact@master
-      with:
-        name: SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        path: SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+      - name: Build
+        run: |
+          cargo build --release --target=${{ matrix.TARGET }}
 
-    - uses: svenstaro/upload-release-action@v2
-      name: Upload binaries to release
-      if: ${{ github.event_name == 'release' }}
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        asset_name: SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
-        tag: ${{ github.ref }}
-        prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        overwrite: true
+      - name: Rename
+        run: cp target/${{ matrix.TARGET }}/release/serialgui_rs${{ matrix.EXTENSION }} SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+          path: SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+
+      - uses: svenstaro/upload-release-action@v2
+        name: Upload binaries to release
+        if: ${{ github.event_name == 'release' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+          asset_name: SerialGUI_rs-${{ matrix.TARGET }}${{ matrix.EXTENSION }}
+          tag: ${{ github.ref }}
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          overwrite: true
+
+  package_macos:
+    name: Package macOS App
+    uses: ./.github/workflows/macos_package.yml

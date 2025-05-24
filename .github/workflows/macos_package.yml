@@ -1,0 +1,84 @@
+name: macOS App Packaging
+
+on:
+  workflow_call:
+
+jobs:
+  package-macos:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            TARGET: aarch64-apple-darwin
+
+          - os: macos-13
+            TARGET: x86_64-apple-darwin
+    env:
+      RUSTFLAGS: -D warnings
+      RUSTDOCFLAGS: -D warnings
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: x86_64-apple-darwin
+
+      - name: Build release
+        run: cargo build --release --target=x86_64-apple-darwin
+
+      - name: Package .app bundle
+        run: |
+          APP_NAME="SerialGUI_rs"
+          TARGET="x86_64-apple-darwin"
+          BIN_PATH="target/$TARGET/release/$APP_NAME"
+          APP_BUNDLE="$APP_NAME.app"
+          mkdir -p "$APP_BUNDLE/Contents/MacOS"
+          mkdir -p "$APP_BUNDLE/Contents/Resources"
+
+          # Copy binary
+          cp "$BIN_PATH" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+
+          # Copy icon
+          cp assets/SerialGUI-rs-logo.icns "$APP_BUNDLE/Contents/Resources/$APP_NAME.icns"
+
+          # Create Info.plist
+          cat > "$APP_BUNDLE/Contents/Info.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key>
+  <string>$APP_NAME</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.example.$APP_NAME</string>
+  <key>CFBundleName</key>
+  <string>$APP_NAME</string>
+  <key>CFBundleVersion</key>
+  <string>1.0</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleIconFile</key>
+  <string>$APP_NAME.icns</string>
+</dict>
+</plist>
+EOF
+
+      - name: Create DMG
+        run: |
+          mkdir dmg_folder
+          mv SerialGUI_rs.app dmg_folder/
+
+          hdiutil create -volname "SerialGUI_rs" \
+                         -srcfolder dmg_folder \
+                         -ov -format UDZO SerialGUI_rs.dmg
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v3
+        with:
+          name: SerialGUI_rs.dmg
+          path: SerialGUI_rs.dmg
