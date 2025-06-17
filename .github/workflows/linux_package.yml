@@ -57,7 +57,7 @@ jobs:
 
       - name: create icon
         run: |
-          mv assets/SerialGUI-rs-logo.png icon.png
+          ln assets/SerialGUI-rs-logo.png icon.png
 
       - name: Build AppImage
         # Build your Rust application and package it into an AppImage
