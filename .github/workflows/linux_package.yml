@@ -89,7 +89,7 @@ jobs:
           echo "APPIMAGE_FINAL_NAME=$FINAL_APPIMAGE_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Upload AppImage artifact
-        uses: actions/upload-artifact@v3 # Action to upload build artifacts
+        uses: actions/upload-artifact@v4 # Action to upload build artifacts
         with:
           # Name of the artifact (e.g., build-appimage-Linux-x64)
           name: ${{ github.job }}-${{ matrix.ARCH_SUFFIX }}
