@@ -42,7 +42,9 @@ jobs:
           # Update package lists and install required packages
           wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
           chmod +x appimagetool
-          export PATH="$PATH:$(pwd)"
+          mkdir -p $HOME/.local/bin
+          mv appimagetool $HOME/.local/bin/
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install cargo-appimage
         # Install the Rust utility for building AppImages
