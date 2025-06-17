@@ -73,7 +73,7 @@ jobs:
         id: rename_appimage # Assign an ID to this step to reference its outputs
         run: |
           # Find the generated AppImage file (e.g., serialgui_rs-0.1.0-x86_64.AppImage)
-          ORIGINAL_APPIMAGE_PATH=$(find target/release -name "*.AppImage" -print -quit)
+          ORIGINAL_APPIMAGE_PATH=$(find target/appimage -name "*.AppImage" -print -quit)
           if [ -z "$ORIGINAL_APPIMAGE_PATH" ]; then
             echo "Error: No AppImage file found in target/release after build!"
             exit 1
