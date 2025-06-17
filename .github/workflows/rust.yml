@@ -158,3 +158,7 @@ jobs:
   package_macos:
     name: Package macOS App
     uses: ./.github/workflows/macos_package.yml
+
+  package_linux:
+    name: Package Linux AppImage
+    uses: ./.github/workflows/linux_package.yml

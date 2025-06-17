@@ -1,0 +1,116 @@
+name: Linux AppImage Packaging
+
+on:
+  # Trigger the workflow manually from the GitHub Actions UI
+  workflow_dispatch:
+  # Trigger the workflow on pushes to the main branch
+  push:
+    branches:
+      - main
+  # Trigger the workflow when a new release is published or edited,
+  # allowing us to upload the AppImage as a release asset.
+  release:
+    types: [published, edited]
+
+jobs:
+  build-appimage:
+    # Use a Linux runner for AppImage creation
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - os: ubuntu-latest
+          TARGET: x86_64-unknown-linux-gnu
+          ARCH_SUFFIX: Linux-x64
+
+        - os: ubuntu-latest
+          TARGET: aarch64-unknown-linux-gnu
+          ARCH_SUFFIX: Linux-arm64
+    env:
+      APP_NAME_RELEASE: SerialGUI_rs # Consistent app name for release assets (e.g., SerialGUI_rs-Linux-x64.AppImage)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Action to check out your repository code
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable # Action to set up the Rust toolchain
+        with:
+          toolchain: stable
+          # Use the TARGET variable from the matrix to install the correct toolchain
+          target: ${{ matrix.TARGET }}
+
+      - name: Install appimage tools
+        # Install the necessary tools for building AppImages
+        run: |
+          # Update package lists and install required packages
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+          export PATH="$PATH:$(pwd)"
+
+      - name: Install cargo-appimage
+        # Install the Rust utility for building AppImages
+        run: cargo install cargo-appimage
+
+      - name: Install system dependencies for AppImage runtime
+        # libfuse2 is a common dependency required by many AppImages to run.
+        # Other tools like squashfs-tools are often pre-installed or handled by cargo-appimage itself.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2  build-essential curl git pkg-config libudev-dev
+
+      - name: create icon
+        run: |
+          mv assets/SerialGUI-rs-logo.png icon.png
+
+      - name: Build AppImage
+        # Build your Rust application and package it into an AppImage
+        # --release builds the optimized binary
+        # --icon specifies the path to your application icon
+        run: cargo appimage 
+
+      - name: Rename AppImage for consistent release naming
+        # Dynamically find the .AppImage file and rename it to a consistent format.
+        # This aligns the naming with the macOS workflow for releases.
+        id: rename_appimage # Assign an ID to this step to reference its outputs
+        run: |
+          # Find the generated AppImage file (e.g., serialgui_rs-0.1.0-x86_64.AppImage)
+          ORIGINAL_APPIMAGE_PATH=$(find target/release -name "*.AppImage" -print -quit)
+          if [ -z "$ORIGINAL_APPIMAGE_PATH" ]; then
+            echo "Error: No AppImage file found in target/release after build!"
+            exit 1
+          fi
+
+          # Construct the new desired filename (e.g., SerialGUI_rs-Linux-x64.AppImage)
+          FINAL_APPIMAGE_NAME="${{ env.APP_NAME_RELEASE }}-${{ matrix.ARCH_SUFFIX }}.AppImage"
+          FINAL_APPIMAGE_PATH="target/release/$FINAL_APPIMAGE_NAME"
+
+          echo "Renaming '$ORIGINAL_APPIMAGE_PATH' to '$FINAL_APPIMAGE_PATH'"
+          mv "$ORIGINAL_APPIMAGE_PATH" "$FINAL_APPIMAGE_PATH"
+
+          # Set outputs that can be used in subsequent steps
+          echo "APPIMAGE_FINAL_PATH=$FINAL_APPIMAGE_PATH" >> "$GITHUB_OUTPUT"
+          echo "APPIMAGE_FINAL_NAME=$FINAL_APPIMAGE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v3 # Action to upload build artifacts
+        with:
+          # Name of the artifact (e.g., build-appimage-Linux-x64)
+          name: ${{ github.job }}-${{ matrix.ARCH_SUFFIX }}
+          # Path to the renamed AppImage file
+          path: ${{ steps.rename_appimage.outputs.APPIMAGE_FINAL_PATH }}
+
+      - name: Upload AppImage to GitHub Release
+        uses: svenstaro/upload-release-action@v2 # Action to upload assets to a GitHub Release
+        # This step will only run if the workflow was triggered by a 'release' event.
+        if: ${{ github.event_name == 'release' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Token for authenticating with GitHub API
+          # Use the path to the renamed AppImage file
+          file: ${{ steps.rename_appimage.outputs.APPIMAGE_FINAL_PATH }}
+          # Use the consistent asset name for the release
+          asset_name: ${{ steps.rename_appimage.outputs.APPIMAGE_FINAL_NAME }}
+          tag: ${{ github.ref }} # The Git tag associated with the release
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }} # Automatically set prerelease status
+          overwrite: true # Allow overwriting existing assets (useful for re-runs)
