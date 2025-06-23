@@ -511,8 +511,16 @@ impl eframe::App for TemplateApp {
         }
 
         if let Some(ref mut rx) = self.rx_from_serial {
-            if let Ok(message) = rx.try_recv() {
-                self.write_log(message.as_str());
+            let mut accumulated_message = String::new();
+            let mut messages_received = false;
+
+            while let Ok(message) = rx.try_recv() {
+                accumulated_message.push_str(&message);
+                messages_received = true;
+            }
+
+            if messages_received {
+                self.write_log(&accumulated_message);
                 ctx.request_repaint();
             }
         }
