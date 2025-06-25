@@ -13,6 +13,8 @@ use std::{env, thread};
 use crate::guistrings;
 use crate::portsettings::PortSettings;
 
+use crate::info::info_popup;
+
 struct BaudRate {
     string_repr: &'static str,
     numeric_repr: u32,
@@ -89,6 +91,7 @@ pub struct TemplateApp {
     rx_from_gui: Option<mpsc::Receiver<String>>,
     #[serde(skip)] // This how you opt-out of serialization of a field
     port_thread: Option<thread::JoinHandle<()>>,
+    show_info_popup: bool,
 }
 
 impl Default for TemplateApp {
@@ -114,6 +117,7 @@ impl Default for TemplateApp {
             tx_to_gui: None,
             rx_from_gui: None,
             port_thread: None,
+            show_info_popup: false,
         }
     }
 }
@@ -338,7 +342,9 @@ impl eframe::App for TemplateApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
-
+        if self.show_info_popup {
+            info_popup(ctx, &mut self.show_info_popup);
+        }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
@@ -347,6 +353,10 @@ impl eframe::App for TemplateApp {
                 let is_web = cfg!(target_arch = "wasm32");
                 if !is_web {
                     ui.menu_button("File", |ui| {
+                        if ui.button("Info").clicked() {
+                            self.show_info_popup = true;
+                            ui.close_menu();
+                        }
                         if ui.button("Quit").clicked() {
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
