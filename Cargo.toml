@@ -5,6 +5,10 @@ authors = ["Lutgaru <lutgaru@gmail.com>"]
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-GPLv3", "**/*.rs", "Cargo.toml"]
 rust-version = "1.81"
+build = "build.rs"
+
+[build-dependencies]
+vergen-gitcl = { version = "1.0.0", features = ["build", "cargo", "rustc", "si"] }
 
 [package.metadata.docs.rs]
 all-features = true
