@@ -2,10 +2,6 @@ name: macOS App Packaging
 
 on:
   workflow_call:
-  # Add the 'release' event to trigger this workflow when a new release is published.
-  # This allows the 'upload-release-action' to attach assets to the release.
-  release:
-    types: [published, edited]
 
 jobs:
   package-macos:

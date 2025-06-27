@@ -2,10 +2,6 @@ name: Linux AppImage Packaging
 
 on:
   workflow_call:
-  # Trigger the workflow when a new release is published or edited,
-  # allowing us to upload the AppImage as a release asset.
-  release:
-    types: [published, edited]
 
 jobs:
   build-appimage:
