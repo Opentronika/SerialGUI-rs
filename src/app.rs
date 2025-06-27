@@ -154,7 +154,7 @@ impl TemplateApp {
             let has_update = rt.block_on(async { check_new_version().await });
 
             if let Err(e) = tx.send(has_update) {
-                eprintln!("Failed to send update check result: {}", e);
+                eprintln!("Failed to send update check result: {e}");
             }
             conext_clone.request_repaint();
         });
@@ -202,7 +202,7 @@ impl TemplateApp {
                 match ports.len() {
                     0 => println!("No ports found."),
                     1 => println!("Found 1 port:"),
-                    n => println!("Found {} ports:", n),
+                    n => println!("Found {n} ports:"),
                 };
 
                 for p in ports {
@@ -239,7 +239,7 @@ impl TemplateApp {
                 }
             }
             Err(e) => {
-                eprintln!("{:?}", e);
+                eprintln!("{e:?}");
                 eprintln!("Error listing serial ports");
             }
         }
@@ -311,7 +311,7 @@ impl TemplateApp {
                     if let Some(ref mut port_instance) = port {
                         match port_instance.write_all(message.as_bytes()) {
                             Ok(_) => eprintln!("Write success"),
-                            Err(e) => eprintln!("{:?}", e),
+                            Err(e) => eprintln!("{e:?}"),
                         }
                     }
                     context_clone.request_repaint();
@@ -337,7 +337,7 @@ impl TemplateApp {
     }
 
     fn write_log(&mut self, message: &str) {
-        eprintln!("{}", message);
+        eprintln!("{message}");
         self.logstring += message;
         if self.logstring.len() > MAX_LOG_STRING_LENGTH {
             let excess_len = self.logstring.len() - MAX_LOG_STRING_LENGTH;
@@ -346,7 +346,7 @@ impl TemplateApp {
         if let Some(ref mut file) = self.filelog {
             match file.write_all(message.as_bytes()) {
                 Ok(_) => {}
-                Err(e) => eprintln!("{:?}", e),
+                Err(e) => eprintln!("{e:?}"),
             }
         }
         // self.logstring += "\n";
@@ -523,7 +523,7 @@ impl eframe::App for TemplateApp {
                             }
                             Err(e) => {
                                 self.write_log("Open file failed \n");
-                                eprintln!("{}", e);
+                                eprintln!("{e}");
                             }
                         }
                     } else {

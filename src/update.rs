@@ -11,7 +11,7 @@ pub async fn check_new_version() -> bool {
             if let Ok(json) = response.json::<serde_json::Value>().await {
                 if let Some(tag) = json.get("tag_name").and_then(|v| v.as_str()) {
                     if tag != env!("VERGEN_GIT_DESCRIBE") {
-                        eprint!("New version available: {}", tag);
+                        eprint!("New version available: {tag}");
                         return true;
                     }
                 }
@@ -47,7 +47,7 @@ pub fn update_popup(ctx: &egui::Context, show_popup: &mut bool) {
                                     if let Err(e) = webbrowser::open(
                                 "https://github.com/Opentronika/SerialGUI-rs/releases/latest",
                             ) {
-                                eprintln!("Failed to open browser: {}", e);
+                                 eprintln!("Failed to send update check result: {e}");
                             }
                                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                                 }
