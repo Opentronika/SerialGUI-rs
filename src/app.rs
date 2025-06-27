@@ -14,6 +14,7 @@ use crate::guistrings;
 use crate::portsettings::PortSettings;
 
 use crate::info::info_popup;
+use crate::update::{check_new_version, update_popup};
 
 struct BaudRate {
     string_repr: &'static str,
@@ -92,6 +93,9 @@ pub struct TemplateApp {
     #[serde(skip)] // This how you opt-out of serialization of a field
     port_thread: Option<thread::JoinHandle<()>>,
     show_info_popup: bool,
+    show_update_popup: bool,
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    update_rx: Option<std::sync::mpsc::Receiver<bool>>,
 }
 
 impl Default for TemplateApp {
@@ -118,6 +122,8 @@ impl Default for TemplateApp {
             rx_from_gui: None,
             port_thread: None,
             show_info_popup: false,
+            show_update_popup: false,
+            update_rx: None,
         }
     }
 }
@@ -137,7 +143,22 @@ impl TemplateApp {
         let mut app: TemplateApp = Default::default();
 
         app.filelogpath = app.generate_filename();
-        app.update_ports();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let conext_clone = _cc.egui_ctx.clone();
+        thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all() // Enable all Tokio features (network, time, etc.)
+                .build()
+                .expect("Failed to create Tokio runtime in background thread");
+
+            let has_update = rt.block_on(async { check_new_version().await });
+
+            if let Err(e) = tx.send(has_update) {
+                eprintln!("Failed to send update check result: {}", e);
+            }
+            conext_clone.request_repaint();
+        });
+        app.update_rx = Some(rx);
         if !app.port_list.is_empty() {
             app.port_settings.port_name = app.port_list[0].clone();
         } else {
@@ -344,6 +365,18 @@ impl eframe::App for TemplateApp {
         // For inspiration and more examples, go to https://emilk.github.io/egui
         if self.show_info_popup {
             info_popup(ctx, &mut self.show_info_popup);
+        }
+        if self.show_update_popup {
+            update_popup(ctx, &mut self.show_update_popup);
+        }
+        if let Some(ref rx) = self.update_rx {
+            if let Ok(has_update) = rx.try_recv() {
+                if has_update {
+                    self.show_update_popup = true;
+                }
+                // Optionally, drop the receiver so we don't check again
+                // self.update_rx = None;
+            }
         }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
