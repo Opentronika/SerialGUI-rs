@@ -13,20 +13,65 @@ A lightweight serial terminal monitor written in Rust
 
 ## Installation
 
-1. Clone the repository:
-    ```sh
-    git clone https://github.com/your_username/SerialGUI-Rs.git
-    ```
-2. Navigate to the project directory:
-    ```sh
-    cd SerialGUI-Rs
-    ```
-3. Build the project:
-    ```sh
-    cargo build --release
-    ```
+Download the latest release for your platform from the [Releases page](https://github.com/Opentronika/SerialGUI-rs/releases/latest):
 
-## Usage
+### Linux
+
+- **x86_64 (Intel/AMD 64-bit):**
+  - File: `SerialGUI_rs-Linux-x64.AppImage`
+  - The SHA256 hash is available on the download page.
+
+- **ARM64 (Raspberry Pi, etc):**
+  - File: `SerialGUI_rs-Linux-arm64.AppImage`
+  - The SHA256 hash is available on the download page.
+
+**To run the AppImage:**
+```sh
+chmod +x SerialGUI_rs-*.AppImage
+./SerialGUI_rs-*.AppImage
+```
+
+---
+
+### macOS
+
+- **Apple Silicon (ARM64):**
+  - File: `SerialGUI_rs-MacOS-arm64.dmg`
+  - The SHA256 hash is available on the download page.
+
+- **Intel (x64):**
+  - File: `SerialGUI_rs-MacOS-x64.dmg`
+  - The SHA256 hash is available on the download page.
+
+**To install:**
+1. Download the `.dmg` file for your architecture from the [latest release](https://github.com/Opentronika/SerialGUI-rs/releases/latest).
+2. Open it and drag the app to your Applications folder.
+
+---
+
+### Windows
+
+- **x86_64 (64-bit):**
+  - File: `SerialGUI_rs-x86_64-pc-windows-msvc.exe`
+  - The SHA256 hash is available on the download page.
+
+**To install:**
+1. Download the `.exe` file from the [latest release](https://github.com/Opentronika/SerialGUI-rs/releases/latest).
+2. Double-click to run.
+
+**Tip:**  
+You can verify the integrity of your download with the provided SHA256 hash. For example, on Linux/macOS:
+
+```sh
+sha256sum SerialGUI_rs-*.AppImage
+```
+or on Windows (PowerShell):
+
+```powershell
+Get-FileHash .\SerialGUI_rs-x86_64-pc-windows-msvc.exe -Algorithm SHA256
+```
+
+## Usage from cargo
 
 1. Run the application:
     ```sh
