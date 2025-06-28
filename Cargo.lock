@@ -3301,7 +3301,7 @@ dependencies = [
 
 [[package]]
 name = "serialgui_rs"
-version = "0.1.0"
+version = "1.0.1"
 dependencies = [
  "chrono",
  "eframe",
