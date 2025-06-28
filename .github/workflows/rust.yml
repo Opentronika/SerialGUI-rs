@@ -102,7 +102,7 @@ jobs:
         with:
           fetch-depth: 0
           filter: tree:0
-          fetch-tags: true
+          ref: ${{ github.ref }}
 
       - name: Install system dependencies
         if: contains(matrix.TARGET, 'linux')
