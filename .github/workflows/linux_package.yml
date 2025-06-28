@@ -27,6 +27,7 @@ jobs:
         with:
           fetch-depth: 0
           filter: tree:0
+          fetch-tags: true
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable # Action to set up the Rust toolchain
