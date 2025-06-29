@@ -4,6 +4,8 @@ A lightweight serial terminal monitor written in Rust
 
 **SerialGUI-Rs** is a cross-platform graphical serial monitor application that uses the [**serialport-rs**](https://github.com/serialport/serialport-rs) library as its backend and [**eframe**](https://github.com/emilk/egui/tree/master/crates/eframe) for the graphical interface.
 
+![Screenshot](assets/Screenshot.png)
+
 ## Features
 
 - Real-time serial port monitoring.
