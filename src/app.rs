@@ -11,30 +11,10 @@ use std::time::Duration;
 use std::{env, thread};
 
 use crate::guistrings;
-use crate::portsettings::PortSettings;
+use crate::portsettings::{PortSettings, BAUD_RATES};
 
 use crate::info::info_popup;
 use crate::update::{check_new_version, update_popup};
-
-struct BaudRate {
-    string_repr: &'static str,
-    numeric_repr: u32,
-}
-
-const BAUD_RATES: [BaudRate; 3] = [
-    BaudRate {
-        string_repr: "9600",
-        numeric_repr: 9600,
-    },
-    BaudRate {
-        string_repr: "38400",
-        numeric_repr: 38400,
-    },
-    BaudRate {
-        string_repr: "115200",
-        numeric_repr: 115200,
-    },
-];
 
 const MAX_LOG_STRING_LENGTH: usize = 30000;
 const LOG_FILE_DEFAULT_NAME: &str = "LogFile";

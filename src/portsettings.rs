@@ -1,4 +1,24 @@
 use serialport::{FlowControl, Parity, StopBits};
+
+pub struct BaudRate {
+    pub string_repr: &'static str,
+    pub numeric_repr: u32,
+}
+
+pub const BAUD_RATES: [BaudRate; 3] = [
+    BaudRate {
+        string_repr: "9600",
+        numeric_repr: 9600,
+    },
+    BaudRate {
+        string_repr: "38400",
+        numeric_repr: 38400,
+    },
+    BaudRate {
+        string_repr: "115200",
+        numeric_repr: 115200,
+    },
+];
 pub struct PortSettings {
     pub port_name: String,
     pub baudrate: u32,
