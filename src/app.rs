@@ -16,9 +16,9 @@ use crate::portsettings::{PortSettings, BAUD_RATES};
 use crate::info::info_popup;
 use crate::update::{check_new_version, update_popup};
 
-const MAX_LOG_STRING_LENGTH: usize = 30000;
-const LOG_FILE_DEFAULT_NAME: &str = "LogFile";
-const LOG_FILE_DEFAULT_EXTENTION: &str = ".txt";
+use crate::generalsettings::{
+    LOG_FILE_DEFAULT_EXTENTION, LOG_FILE_DEFAULT_NAME, MAX_LOG_STRING_LENGTH,
+};
 
 fn flow_control_iter() -> impl Iterator<Item = FlowControl> {
     [
