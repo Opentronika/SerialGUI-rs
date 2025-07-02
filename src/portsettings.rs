@@ -27,6 +27,18 @@ pub struct PortSettings {
     pub stop_bits: StopBits,
 }
 
+impl Default for PortSettings {
+    fn default() -> Self {
+        PortSettings {
+            port_name: String::new(),
+            baudrate: BAUD_RATES[2].numeric_repr, // Por ejemplo, 115200
+            flowcontrol: FlowControl::None,
+            parity: Parity::None,
+            stop_bits: StopBits::One,
+        }
+    }
+}
+
 impl Clone for PortSettings {
     fn clone(&self) -> Self {
         PortSettings {
