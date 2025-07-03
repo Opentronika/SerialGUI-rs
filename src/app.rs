@@ -5,10 +5,10 @@ use core::f32;
 use egui::Vec2;
 use guistrings::GuiStrings;
 use serialport::{FlowControl, Parity, StopBits};
+use std::env;
 use std::fs::File;
 use std::io::Write;
-use std::sync::mpsc;
-use std::{env, thread};
+use std::sync::{mpsc, Arc, Mutex};
 
 use crate::guistrings;
 use crate::serial_impl::{PortSettings, BAUD_RATES};
@@ -55,13 +55,11 @@ pub struct TemplateApp {
     filelog: Option<File>,
     logfilebutton: String,
     show_info_popup: bool,
-    show_update_popup: bool,
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    update_rx: Option<std::sync::mpsc::Receiver<bool>>,
     #[serde(skip)] // This how you opt-out of serialization of a field
     serial_manager: Option<Box<dyn CommunicationManager>>,
     #[serde(skip)] // This how you opt-out of serialization of a field
     serial_events_rx: Option<mpsc::Receiver<CommunicationEvent>>,
+    show_update_popup: Arc<Mutex<bool>>,
 }
 
 impl Default for TemplateApp {
@@ -76,8 +74,7 @@ impl Default for TemplateApp {
             filelog: None,
             logfilebutton: String::from(GuiStrings::STARTLOGFILE),
             show_info_popup: false,
-            show_update_popup: false,
-            update_rx: None,
+            show_update_popup: Arc::new(Mutex::new(false)),
             serial_manager: Some(Box::new(SerialCommunication::new())),
             serial_events_rx: None,
         }
@@ -91,23 +88,9 @@ impl TemplateApp {
         let mut app: TemplateApp = Default::default();
 
         app.filelogpath = app.generate_filename();
-        let (tx, rx) = std::sync::mpsc::channel();
         let conext_clone = _cc.egui_ctx.clone();
-        thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all() // Enable all Tokio features (network, time, etc.)
-                .build()
-                .expect("Failed to create Tokio runtime in background thread");
-
-            let has_update = rt.block_on(async { check_new_version().await });
-
-            if let Err(e) = tx.send(has_update) {
-                eprintln!("Failed to send update check result: {e}");
-            }
-            conext_clone.request_repaint();
-        });
+        check_new_version(&conext_clone, app.show_update_popup.clone());
         app.update_ports();
-        app.update_rx = Some(rx);
         if !app.port_list.is_empty() {
             app.port_settings.port_name = app.port_list[0].clone();
         } else {
@@ -173,14 +156,9 @@ impl eframe::App for TemplateApp {
         if self.show_info_popup {
             info_popup(ctx, &mut self.show_info_popup);
         }
-        if self.show_update_popup {
-            update_popup(ctx, &mut self.show_update_popup);
-        }
-        if let Some(ref rx) = self.update_rx {
-            if let Ok(has_update) = rx.try_recv() {
-                if has_update {
-                    self.show_update_popup = true;
-                }
+        if let Ok(mut show_update) = self.show_update_popup.lock() {
+            if *show_update {
+                update_popup(ctx, &mut show_update);
             }
         }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
