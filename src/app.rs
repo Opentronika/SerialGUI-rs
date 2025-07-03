@@ -88,14 +88,6 @@ impl TemplateApp {
     const DEFAULT_PORT: &'static str = "No port";
     /// Called once before the first frame.
     pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        // This is also where you can customize the look and feel of egui using
-        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
-
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
-        // if let Some(storage) = cc.storage {
-        //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        // }
         let mut app: TemplateApp = Default::default();
 
         app.filelogpath = app.generate_filename();
@@ -177,15 +169,7 @@ impl TemplateApp {
 }
 
 impl eframe::App for TemplateApp {
-    /// Called by the frame work to save state before shutdown.
-    fn save(&mut self, _storage: &mut dyn eframe::Storage) {
-        // eframe::set_value(storage, eframe::APP_KEY, self);
-    }
-
-    /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
         if self.show_info_popup {
             info_popup(ctx, &mut self.show_info_popup);
         }
@@ -197,28 +181,20 @@ impl eframe::App for TemplateApp {
                 if has_update {
                     self.show_update_popup = true;
                 }
-                // Optionally, drop the receiver so we don't check again
-                // self.update_rx = None;
             }
         }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-
             egui::menu::bar(ui, |ui| {
-                // NOTE: no File->Quit on web pages!
-                let is_web = cfg!(target_arch = "wasm32");
-                if !is_web {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Info").clicked() {
-                            self.show_info_popup = true;
-                            ui.close_menu();
-                        }
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
+                ui.menu_button("File", |ui| {
+                    if ui.button("Info").clicked() {
+                        self.show_info_popup = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("Quit").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                });
+                ui.add_space(16.0);
 
                 egui::widgets::global_theme_preference_buttons(ui);
                 if ui.button("Clear output").clicked() {
@@ -230,18 +206,17 @@ impl eframe::App for TemplateApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             let sizeavailable = ui.available_size();
             let sizetext = Vec2::new(sizeavailable.x, sizeavailable.y * 0.85);
-            // The central panel the region left after adding TopPanel's and SidePanel's
             egui::ScrollArea::vertical()
                 .max_height(sizetext.y)
                 .show(ui, |ui| {
                     ui.add_sized(
                         sizetext,
                         egui::TextEdit::multiline(&mut self.logstring)
-                            .font(egui::TextStyle::Monospace) // for cursor height
+                            .font(egui::TextStyle::Monospace)
                             .code_editor()
                             .desired_rows(10)
                             .lock_focus(true)
-                            .desired_width(f32::INFINITY), // .layouter(&mut layouter),
+                            .desired_width(f32::INFINITY),
                     );
                 });
 
@@ -260,7 +235,6 @@ impl eframe::App for TemplateApp {
                 egui::ComboBox::from_id_salt(500)
                     .selected_text(format!("{:?}", self.port_settings.port_name))
                     .show_ui(ui, |ui| {
-                        // ui.selectable_value(&mut self.selected, Values::Dos, "First");
                         for port_name in &self.port_list {
                             ui.selectable_value(
                                 &mut self.port_settings.port_name,
@@ -273,7 +247,6 @@ impl eframe::App for TemplateApp {
                 egui::ComboBox::from_id_salt(501)
                     .selected_text(format!("{:?}", self.port_settings.baudrate))
                     .show_ui(ui, |ui| {
-                        // ui.selectable_value(&mut self.selected, Values::Dos, "First");
                         for baudrate in &BAUD_RATES {
                             ui.selectable_value(
                                 &mut self.port_settings.baudrate,
@@ -350,7 +323,6 @@ impl eframe::App for TemplateApp {
                     Vec2::new(500.0, 20.0),
                     egui::TextEdit::singleline(&mut self.filelogpath.clone()),
                 );
-                // ui.add(egui::TextEdit::singleline(&mut self.filelogpath.clone()));
                 if ui.button(self.logfilebutton.clone()).clicked() {
                     if self.filelog.is_none() {
                         let openfile = File::create(self.filelogpath.clone());
