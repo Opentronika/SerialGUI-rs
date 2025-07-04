@@ -1,25 +1,50 @@
-use egui::{Align, Layout, Vec2};
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+};
+
+use egui::{Align, Context, Layout, Vec2};
 use reqwest::Client;
 
-pub async fn check_new_version() -> bool {
+pub async fn request_latest_version() -> Result<Option<String>, reqwest::Error> {
     let url = "https://api.github.com/repos/Opentronika/SerialGUI-rs/releases/latest";
     let client = Client::new();
-    let request = client.get(url).header("User-Agent", "serialgui_rs").build();
+    let request = client
+        .get(url)
+        .header("User-Agent", "serialgui_rs")
+        .build()?;
 
-    if let Ok(request) = request {
-        if let Ok(response) = client.execute(request).await {
-            if let Ok(json) = response.json::<serde_json::Value>().await {
-                if let Some(tag) = json.get("tag_name").and_then(|v| v.as_str()) {
-                    if tag != env!("VERGEN_GIT_DESCRIBE") {
-                        eprint!("New version available: {tag}");
-                        return true;
-                    }
+    let response = client.execute(request).await?;
+    let json = response.json::<serde_json::Value>().await?;
+    Ok(json
+        .get("tag_name")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string()))
+}
+
+pub fn check_new_version(ctx: &Context, update_available: Arc<Mutex<bool>>) {
+    let ctx_clone = ctx.clone();
+    thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("Failed to create Tokio runtime in background thread");
+
+        let latest_version = rt.block_on(async { request_latest_version().await });
+
+        if let Ok(Some(tag)) = latest_version {
+            if tag != env!("VERGEN_GIT_DESCRIBE") {
+                eprintln!(
+                    "New version available: {tag} != {}",
+                    env!("VERGEN_GIT_DESCRIBE")
+                );
+                if let Ok(mut flag) = update_available.lock() {
+                    *flag = true;
                 }
             }
         }
-    }
-    eprintln!("New version not found.");
-    false
+        ctx_clone.request_repaint();
+    });
 }
 
 pub fn update_popup(ctx: &egui::Context, show_popup: &mut bool) {

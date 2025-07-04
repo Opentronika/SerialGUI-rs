@@ -1,44 +1,24 @@
+use crate::communicationtrait::{CommunicationEvent, CommunicationManager};
+use crate::serial_impl::SerialCommunication;
 use chrono::prelude::Local;
 use core::f32;
 use egui::Vec2;
 use guistrings::GuiStrings;
-use serialport::{available_ports, FlowControl, Parity, SerialPort, SerialPortType, StopBits};
+use serialport::{FlowControl, Parity, StopBits};
+use std::env;
 use std::fs::File;
 use std::io::Write;
-use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use std::{env, thread};
+use std::sync::{mpsc, Arc, Mutex};
 
 use crate::guistrings;
-use crate::portsettings::PortSettings;
+use crate::serial_impl::{PortSettings, BAUD_RATES};
 
 use crate::info::info_popup;
 use crate::update::{check_new_version, update_popup};
 
-struct BaudRate {
-    string_repr: &'static str,
-    numeric_repr: u32,
-}
-
-const BAUD_RATES: [BaudRate; 3] = [
-    BaudRate {
-        string_repr: "9600",
-        numeric_repr: 9600,
-    },
-    BaudRate {
-        string_repr: "38400",
-        numeric_repr: 38400,
-    },
-    BaudRate {
-        string_repr: "115200",
-        numeric_repr: 115200,
-    },
-];
-
-const MAX_LOG_STRING_LENGTH: usize = 30000;
-const LOG_FILE_DEFAULT_NAME: &str = "LogFile";
-const LOG_FILE_DEFAULT_EXTENTION: &str = ".txt";
+use crate::generalsettings::{
+    LOG_FILE_DEFAULT_EXTENSION, LOG_FILE_DEFAULT_NAME, MAX_LOG_STRING_LENGTH,
+};
 
 fn flow_control_iter() -> impl Iterator<Item = FlowControl> {
     [
@@ -58,13 +38,6 @@ fn stop_bits_iter() -> impl Iterator<Item = StopBits> {
     [StopBits::One, StopBits::Two].iter().cloned()
 }
 
-#[derive(PartialEq)]
-enum EPortState {
-    Open,
-    Closed,
-    Opening,
-}
-
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -75,27 +48,18 @@ pub struct TemplateApp {
     port_settings: PortSettings,
     port_list: Vec<String>,
     #[serde(skip)] // This how you opt-out of serialization of a field
-    port_state: Arc<Mutex<EPortState>>,
     buttonportstring: String,
     sendmessagestring: String,
     filelogpath: String,
     #[serde(skip)] // This how you opt-out of serialization of a field
     filelog: Option<File>,
     logfilebutton: String,
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    tx_to_serial: Option<mpsc::Sender<String>>,
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    rx_from_serial: Option<mpsc::Receiver<String>>,
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    tx_to_gui: Option<mpsc::Sender<String>>,
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    rx_from_gui: Option<mpsc::Receiver<String>>,
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    port_thread: Option<thread::JoinHandle<()>>,
     show_info_popup: bool,
-    show_update_popup: bool,
     #[serde(skip)] // This how you opt-out of serialization of a field
-    update_rx: Option<std::sync::mpsc::Receiver<bool>>,
+    serial_manager: Option<Box<dyn CommunicationManager>>,
+    #[serde(skip)] // This how you opt-out of serialization of a field
+    serial_events_rx: Option<mpsc::Receiver<CommunicationEvent>>,
+    show_update_popup: Arc<Mutex<bool>>,
 }
 
 impl Default for TemplateApp {
@@ -103,27 +67,16 @@ impl Default for TemplateApp {
         Self {
             port_list: Vec::new(),
             logstring: "Starting app\n".to_owned(),
-            port_settings: PortSettings {
-                port_name: String::new(),
-                baudrate: BAUD_RATES[2].numeric_repr,
-                flowcontrol: FlowControl::None,
-                parity: Parity::None,
-                stop_bits: StopBits::One,
-            },
-            port_state: Arc::new(Mutex::new(EPortState::Closed)),
+            port_settings: PortSettings::default(),
             buttonportstring: String::from("Open port"),
             sendmessagestring: String::new(),
-            filelogpath: String::from(LOG_FILE_DEFAULT_NAME) + LOG_FILE_DEFAULT_EXTENTION,
+            filelogpath: String::from(LOG_FILE_DEFAULT_NAME) + LOG_FILE_DEFAULT_EXTENSION,
             filelog: None,
             logfilebutton: String::from(GuiStrings::STARTLOGFILE),
-            tx_to_serial: None,
-            rx_from_serial: None,
-            tx_to_gui: None,
-            rx_from_gui: None,
-            port_thread: None,
             show_info_popup: false,
-            show_update_popup: false,
-            update_rx: None,
+            show_update_popup: Arc::new(Mutex::new(false)),
+            serial_manager: Some(Box::new(SerialCommunication::new())),
+            serial_events_rx: None,
         }
     }
 }
@@ -132,41 +85,17 @@ impl TemplateApp {
     const DEFAULT_PORT: &'static str = "No port";
     /// Called once before the first frame.
     pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        // This is also where you can customize the look and feel of egui using
-        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
-
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
-        // if let Some(storage) = cc.storage {
-        //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        // }
         let mut app: TemplateApp = Default::default();
 
         app.filelogpath = app.generate_filename();
-        let (tx, rx) = std::sync::mpsc::channel();
-        let conext_clone = _cc.egui_ctx.clone();
-        thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all() // Enable all Tokio features (network, time, etc.)
-                .build()
-                .expect("Failed to create Tokio runtime in background thread");
-
-            let has_update = rt.block_on(async { check_new_version().await });
-
-            if let Err(e) = tx.send(has_update) {
-                eprintln!("Failed to send update check result: {e}");
-            }
-            conext_clone.request_repaint();
-        });
-        app.update_rx = Some(rx);
+        let context_clone = _cc.egui_ctx.clone();
+        check_new_version(&context_clone, app.show_update_popup.clone());
+        app.update_ports();
         if !app.port_list.is_empty() {
             app.port_settings.port_name = app.port_list[0].clone();
         } else {
             app.port_settings.port_name = String::from(TemplateApp::DEFAULT_PORT);
         }
-        let (tx_to_gui, rx_from_serial) = mpsc::channel();
-        app.rx_from_serial = Some(rx_from_serial);
-        app.tx_to_gui = Some(tx_to_gui);
         app
     }
 
@@ -183,157 +112,26 @@ impl TemplateApp {
                     .format("%Y-%m-%d_%H-%M-%S")
                     .to_string()
                     .as_str();
-                filename += LOG_FILE_DEFAULT_EXTENTION;
+                filename += LOG_FILE_DEFAULT_EXTENSION;
             }
             Err(_) => {
-                filename = String::from(LOG_FILE_DEFAULT_NAME) + LOG_FILE_DEFAULT_EXTENTION;
+                filename = String::from(LOG_FILE_DEFAULT_NAME) + LOG_FILE_DEFAULT_EXTENSION;
             }
         }
         filename
     }
 
     fn update_ports(&mut self) {
-        match available_ports() {
-            Ok(mut ports) => {
-                // Let's output ports in a stable order to facilitate comparing the output from
-                // different runs (on different platforms, with different features, ...).
-                ports.sort_by_key(|i| i.port_name.clone());
-                self.port_list.clear();
-                match ports.len() {
-                    0 => println!("No ports found."),
-                    1 => println!("Found 1 port:"),
-                    n => println!("Found {n} ports:"),
-                };
-
-                for p in ports {
-                    println!("    {}", p.port_name);
-                    self.port_list.push(p.port_name);
-                    match p.port_type {
-                        SerialPortType::UsbPort(info) => {
-                            println!("        Type: USB");
-                            println!("        VID: {:04x}", info.vid);
-                            println!("        PID: {:04x}", info.pid);
-                            println!(
-                                "        Serial Number: {}",
-                                info.serial_number.as_ref().map_or("", String::as_str)
-                            );
-                            println!(
-                                "        Manufacturer: {}",
-                                info.manufacturer.as_ref().map_or("", String::as_str)
-                            );
-                            println!(
-                                "        Product: {}",
-                                info.product.as_ref().map_or("", String::as_str)
-                            );
-                        }
-                        SerialPortType::BluetoothPort => {
-                            println!("        Type: Bluetooth");
-                        }
-                        SerialPortType::PciPort => {
-                            println!("        Type: PCI");
-                        }
-                        SerialPortType::Unknown => {
-                            println!("        Type: Unknown");
-                        }
-                    }
-                }
+        if let Some(ref mut manager) = self.serial_manager {
+            self.port_list = manager.get_available_connections();
+            if !self.port_list.is_empty() {
+                self.port_settings.port_name = self.port_list[0].clone();
+            } else {
+                self.port_settings.port_name = String::from(TemplateApp::DEFAULT_PORT);
             }
-            Err(e) => {
-                eprintln!("{e:?}");
-                eprintln!("Error listing serial ports");
-            }
+        } else {
+            eprintln!("Serial manager is not initialized.");
         }
-    }
-
-    fn open_port(&mut self, ctx: &egui::Context) -> bool {
-        {
-            *self.port_state.lock().unwrap() = EPortState::Opening;
-        }
-        let port_settings_clone = self.port_settings.clone();
-        let port_state_clone = Arc::clone(&self.port_state);
-        let context_clone = ctx.clone();
-        let tx_to_gui_clone = self.tx_to_gui.clone();
-        let (tx_to_serial, rx_from_gui) = mpsc::channel();
-        self.tx_to_serial = Some(tx_to_serial);
-        // self.rx_from_gui = Some(rx_from_gui);
-
-        let handle = thread::spawn(move || {
-            // some work here
-            let mut port: Option<Box<dyn SerialPort>>;
-            {
-                let mut port_state = port_state_clone.lock().unwrap();
-                let portopen = serialport::new(
-                    port_settings_clone.port_name.clone(),
-                    port_settings_clone.baudrate,
-                )
-                .flow_control(port_settings_clone.flowcontrol)
-                .parity(port_settings_clone.parity)
-                .stop_bits(port_settings_clone.stop_bits)
-                .timeout(Duration::from_millis(10))
-                .open();
-                match portopen {
-                    Ok(portopen) => {
-                        // port = Some(portopen);
-                        *port_state = EPortState::Open;
-                        port = Some(portopen);
-                    }
-                    Err(e) => {
-                        eprintln!(
-                            "Failed to open \"{}\". Error: {}",
-                            port_settings_clone.port_name, e
-                        );
-                        *port_state = EPortState::Closed;
-                        context_clone.request_repaint();
-                        return;
-                    }
-                }
-            }
-
-            while *port_state_clone.lock().unwrap() == EPortState::Open {
-                if let Some(ref mut port_instance) = port {
-                    let size = port_instance.bytes_to_read().unwrap_or(0);
-                    if size > 0 {
-                        let mut serial_buf: Vec<u8> = vec![0; size as usize];
-                        port_instance.read_exact(&mut serial_buf).unwrap();
-                        let message = String::from_utf8(serial_buf[..size as usize].to_vec());
-                        // self.write_log(message.unwrap_or(String::from("")).as_str());
-                        tx_to_gui_clone
-                            .as_ref()
-                            .unwrap()
-                            .send(message.unwrap_or(String::from("")))
-                            .unwrap();
-                        context_clone.request_repaint();
-                    }
-                }
-
-                if let Ok(message) = rx_from_gui.try_recv() {
-                    // self.write_log(message.as_str());
-                    if let Some(ref mut port_instance) = port {
-                        match port_instance.write_all(message.as_bytes()) {
-                            Ok(_) => eprintln!("Write success"),
-                            Err(e) => eprintln!("{e:?}"),
-                        }
-                    }
-                    context_clone.request_repaint();
-                }
-            }
-        });
-        self.port_thread = Some(handle);
-        true
-    }
-
-    fn close_port(&mut self) {
-        {
-            let mut port_state = self.port_state.lock().unwrap();
-            if *port_state == EPortState::Open {
-                *port_state = EPortState::Closed;
-            }
-        }
-
-        if let Some(handle) = self.port_thread.take() {
-            handle.join().unwrap();
-        }
-        self.port_thread = None;
     }
 
     fn write_log(&mut self, message: &str) {
@@ -354,48 +152,27 @@ impl TemplateApp {
 }
 
 impl eframe::App for TemplateApp {
-    /// Called by the frame work to save state before shutdown.
-    fn save(&mut self, _storage: &mut dyn eframe::Storage) {
-        // eframe::set_value(storage, eframe::APP_KEY, self);
-    }
-
-    /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
         if self.show_info_popup {
             info_popup(ctx, &mut self.show_info_popup);
         }
-        if self.show_update_popup {
-            update_popup(ctx, &mut self.show_update_popup);
-        }
-        if let Some(ref rx) = self.update_rx {
-            if let Ok(has_update) = rx.try_recv() {
-                if has_update {
-                    self.show_update_popup = true;
-                }
-                // Optionally, drop the receiver so we don't check again
-                // self.update_rx = None;
+        if let Ok(mut show_update) = self.show_update_popup.lock() {
+            if *show_update {
+                update_popup(ctx, &mut show_update);
             }
         }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-
             egui::menu::bar(ui, |ui| {
-                // NOTE: no File->Quit on web pages!
-                let is_web = cfg!(target_arch = "wasm32");
-                if !is_web {
-                    ui.menu_button("File", |ui| {
-                        if ui.button("Info").clicked() {
-                            self.show_info_popup = true;
-                            ui.close_menu();
-                        }
-                        if ui.button("Quit").clicked() {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                    });
-                    ui.add_space(16.0);
-                }
+                ui.menu_button("File", |ui| {
+                    if ui.button("Info").clicked() {
+                        self.show_info_popup = true;
+                        ui.close_menu();
+                    }
+                    if ui.button("Quit").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                });
+                ui.add_space(16.0);
 
                 egui::widgets::global_theme_preference_buttons(ui);
                 if ui.button("Clear output").clicked() {
@@ -407,18 +184,17 @@ impl eframe::App for TemplateApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             let sizeavailable = ui.available_size();
             let sizetext = Vec2::new(sizeavailable.x, sizeavailable.y * 0.85);
-            // The central panel the region left after adding TopPanel's and SidePanel's
             egui::ScrollArea::vertical()
                 .max_height(sizetext.y)
                 .show(ui, |ui| {
                     ui.add_sized(
                         sizetext,
                         egui::TextEdit::multiline(&mut self.logstring)
-                            .font(egui::TextStyle::Monospace) // for cursor height
+                            .font(egui::TextStyle::Monospace)
                             .code_editor()
                             .desired_rows(10)
                             .lock_focus(true)
-                            .desired_width(f32::INFINITY), // .layouter(&mut layouter),
+                            .desired_width(f32::INFINITY),
                     );
                 });
 
@@ -437,7 +213,6 @@ impl eframe::App for TemplateApp {
                 egui::ComboBox::from_id_salt(500)
                     .selected_text(format!("{:?}", self.port_settings.port_name))
                     .show_ui(ui, |ui| {
-                        // ui.selectable_value(&mut self.selected, Values::Dos, "First");
                         for port_name in &self.port_list {
                             ui.selectable_value(
                                 &mut self.port_settings.port_name,
@@ -450,7 +225,6 @@ impl eframe::App for TemplateApp {
                 egui::ComboBox::from_id_salt(501)
                     .selected_text(format!("{:?}", self.port_settings.baudrate))
                     .show_ui(ui, |ui| {
-                        // ui.selectable_value(&mut self.selected, Values::Dos, "First");
                         for baudrate in &BAUD_RATES {
                             ui.selectable_value(
                                 &mut self.port_settings.baudrate,
@@ -497,13 +271,28 @@ impl eframe::App for TemplateApp {
                     });
 
                 if ui.button(self.buttonportstring.clone()).clicked() {
-                    if self.port_thread.is_none() {
-                        if self.open_port(ctx) {
-                            self.buttonportstring = "Close port".to_string();
+                    if let Some(ref mut manager) = self.serial_manager {
+                        // let mut port_state = self.port_state.lock().unwrap();
+                        if manager.is_running() {
+                            if let Err(e) = manager.stop() {
+                                eprintln!("Error stopping port: {e}");
+                            }
+                            self.buttonportstring = "Open port".to_string();
+                        } else {
+                            if let Err(e) = manager.update_settings(&self.port_settings) {
+                                eprintln!("Error updating port settings: {e}");
+                                return;
+                            }
+                            let (tx, rx) = std::sync::mpsc::channel();
+                            if let Err(e) = manager.start(tx) {
+                                eprintln!("Error starting port: {e}");
+                            } else {
+                                self.buttonportstring = "Close port".to_string();
+                                self.serial_events_rx = Some(rx);
+                            }
                         }
                     } else {
-                        self.buttonportstring = "Open port".to_string();
-                        self.close_port();
+                        eprintln!("Serial manager is not initialized.");
                     }
                 }
             });
@@ -512,7 +301,6 @@ impl eframe::App for TemplateApp {
                     Vec2::new(500.0, 20.0),
                     egui::TextEdit::singleline(&mut self.filelogpath.clone()),
                 );
-                // ui.add(egui::TextEdit::singleline(&mut self.filelogpath.clone()));
                 if ui.button(self.logfilebutton.clone()).clicked() {
                     if self.filelog.is_none() {
                         let openfile = File::create(self.filelogpath.clone());
@@ -540,32 +328,50 @@ impl eframe::App for TemplateApp {
                     egui::TextEdit::singleline(&mut self.sendmessagestring),
                 );
                 if ui.button("Send").clicked() {
-                    if let Some(ref tx) = self.tx_to_serial {
-                        tx.send(self.sendmessagestring.clone()).unwrap();
+                    if let Some(ref mut manager) = self.serial_manager {
+                        if manager.is_running() {
+                            if let Err(e) =
+                                manager.send_data(self.sendmessagestring.as_bytes().to_vec())
+                            {
+                                eprintln!("Error sending data: {e}");
+                            }
+                        } else {
+                            eprintln!("Port is not open, cannot send data.");
+                        }
                     }
+                    eprintln!("Serial manager is not initialized.");
                 }
             });
         });
 
-        if *self.port_state.lock().unwrap() == EPortState::Closed && self.port_thread.is_some() {
-            self.buttonportstring = "Open port".to_string();
-            eprintln!("Port closed by ui");
-            self.close_port();
-        }
-
-        if let Some(ref mut rx) = self.rx_from_serial {
-            let mut accumulated_message = String::new();
-            let mut messages_received = false;
-
-            while let Ok(message) = rx.try_recv() {
-                accumulated_message.push_str(&message);
-                messages_received = true;
-            }
-
-            if messages_received {
-                self.write_log(&accumulated_message);
-                ctx.request_repaint();
+        if let Some(ref mut manager) = self.serial_manager {
+            if !manager.is_running() {
+                self.buttonportstring = "Open port".to_string();
             }
         }
+
+        let mut events = Vec::new();
+        if let Some(ref rx) = self.serial_events_rx {
+            while let Ok(event) = rx.try_recv() {
+                events.push(event);
+            }
+        }
+        for event in events {
+            match event {
+                CommunicationEvent::DataReceived(data) => {
+                    let message = String::from_utf8_lossy(&data);
+                    self.write_log(&message);
+                    ctx.request_repaint();
+                }
+                CommunicationEvent::ConnectionClosed => {
+                    eprintln!("Connection closed.");
+                    self.buttonportstring = "Open port".to_string();
+                }
+                CommunicationEvent::Error(err) => {
+                    eprintln!("Error: {err}");
+                }
+            }
+        }
+        ctx.request_repaint_after(std::time::Duration::from_millis(50));
     }
 }
