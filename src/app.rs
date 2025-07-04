@@ -17,7 +17,7 @@ use crate::info::info_popup;
 use crate::update::{check_new_version, update_popup};
 
 use crate::generalsettings::{
-    LOG_FILE_DEFAULT_EXTENTION, LOG_FILE_DEFAULT_NAME, MAX_LOG_STRING_LENGTH,
+    LOG_FILE_DEFAULT_EXTENSION, LOG_FILE_DEFAULT_NAME, MAX_LOG_STRING_LENGTH,
 };
 
 fn flow_control_iter() -> impl Iterator<Item = FlowControl> {
@@ -70,7 +70,7 @@ impl Default for TemplateApp {
             port_settings: PortSettings::default(),
             buttonportstring: String::from("Open port"),
             sendmessagestring: String::new(),
-            filelogpath: String::from(LOG_FILE_DEFAULT_NAME) + LOG_FILE_DEFAULT_EXTENTION,
+            filelogpath: String::from(LOG_FILE_DEFAULT_NAME) + LOG_FILE_DEFAULT_EXTENSION,
             filelog: None,
             logfilebutton: String::from(GuiStrings::STARTLOGFILE),
             show_info_popup: false,
@@ -88,8 +88,8 @@ impl TemplateApp {
         let mut app: TemplateApp = Default::default();
 
         app.filelogpath = app.generate_filename();
-        let conext_clone = _cc.egui_ctx.clone();
-        check_new_version(&conext_clone, app.show_update_popup.clone());
+        let context_clone = _cc.egui_ctx.clone();
+        check_new_version(&context_clone, app.show_update_popup.clone());
         app.update_ports();
         if !app.port_list.is_empty() {
             app.port_settings.port_name = app.port_list[0].clone();
@@ -112,10 +112,10 @@ impl TemplateApp {
                     .format("%Y-%m-%d_%H-%M-%S")
                     .to_string()
                     .as_str();
-                filename += LOG_FILE_DEFAULT_EXTENTION;
+                filename += LOG_FILE_DEFAULT_EXTENSION;
             }
             Err(_) => {
-                filename = String::from(LOG_FILE_DEFAULT_NAME) + LOG_FILE_DEFAULT_EXTENTION;
+                filename = String::from(LOG_FILE_DEFAULT_NAME) + LOG_FILE_DEFAULT_EXTENSION;
             }
         }
         filename
