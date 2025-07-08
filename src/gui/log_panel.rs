@@ -2,14 +2,12 @@ use egui::Vec2;
 
 pub struct LogPanel {
     pub content: String,
-    max_length: usize,
 }
 
 impl LogPanel {
-    pub fn new(max_length: usize) -> Self {
+    pub fn new(_max_length: usize) -> Self {
         Self {
             content: "Starting app\n".to_string(),
-            max_length,
         }
     }
 
@@ -31,11 +29,12 @@ impl LogPanel {
             });
     }
 
-    pub fn append_log(&mut self, message: &str) {
+    pub fn append_log(&mut self, message: &str, max_length: usize) {
         eprintln!("{message}");
         self.content += message;
-        if self.content.len() > self.max_length {
-            let excess_len = self.content.len() - self.max_length;
+
+        if self.content.len() > max_length {
+            let excess_len = self.content.len() - max_length;
             self.content.drain(0..excess_len);
         }
     }
@@ -60,15 +59,12 @@ impl<'de> serde::Deserialize<'de> for LogPanel {
         D: serde::Deserializer<'de>,
     {
         let content = String::deserialize(deserializer)?;
-        Ok(Self {
-            content,
-            max_length: crate::generalsettings::MAX_LOG_STRING_LENGTH,
-        })
+        Ok(Self { content })
     }
 }
 
 impl Default for LogPanel {
     fn default() -> Self {
-        Self::new(crate::generalsettings::MAX_LOG_STRING_LENGTH)
+        Self::new(30000)
     }
 }

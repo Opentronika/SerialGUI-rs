@@ -1,3 +1,4 @@
+use crate::generalsettings::AppSettings;
 use crate::guistrings::GuiStrings;
 use egui::Vec2;
 use std::fs::File;
@@ -20,8 +21,7 @@ impl FileLogPanel {
         }
     }
 
-    pub fn generate_filename(&self) -> String {
-        use crate::generalsettings::{LOG_FILE_DEFAULT_EXTENSION, LOG_FILE_DEFAULT_NAME};
+    pub fn generate_filename(&self, settings: &AppSettings) -> String {
         use chrono::prelude::Local;
         use std::env;
 
@@ -30,23 +30,23 @@ impl FileLogPanel {
                 format!(
                     "{}/{}_{}.{}",
                     dir.display(),
-                    LOG_FILE_DEFAULT_NAME,
+                    settings.log_file_default_name,
                     Local::now().format("%Y-%m-%d_%H-%M-%S"),
-                    LOG_FILE_DEFAULT_EXTENSION.trim_start_matches('.')
+                    settings.log_file_default_extension.trim_start_matches('.')
                 )
             }
             Err(_) => {
                 format!(
                     "{}_{}{}",
-                    LOG_FILE_DEFAULT_NAME,
+                    settings.log_file_default_name,
                     Local::now().format("%Y-%m-%d_%H-%M-%S"),
-                    LOG_FILE_DEFAULT_EXTENSION
+                    settings.log_file_default_extension
                 )
             }
         }
     }
 
-    pub fn show(&mut self, ui: &mut egui::Ui) {
+    pub fn show(&mut self, ui: &mut egui::Ui, settings: &AppSettings) {
         ui.horizontal_wrapped(|ui| {
             ui.add_sized(
                 Vec2::new(500.0, 20.0),
@@ -54,12 +54,12 @@ impl FileLogPanel {
             );
 
             if ui.button(self.button_text.clone()).clicked() {
-                self.toggle_file_logging();
+                self.toggle_file_logging(settings);
             }
         });
     }
 
-    fn toggle_file_logging(&mut self) {
+    fn toggle_file_logging(&mut self, settings: &AppSettings) {
         if self.log_file.is_none() {
             // Start logging
             match File::create(&self.file_path) {
@@ -75,8 +75,8 @@ impl FileLogPanel {
             // Stop logging
             self.log_file = None;
             self.button_text = GuiStrings::STARTLOGFILE.to_string();
-            // Generate new filename for next session
-            self.file_path = self.generate_filename();
+            // Generate new filename for next session using current settings
+            self.file_path = self.generate_filename(settings);
         }
     }
 
@@ -88,15 +88,15 @@ impl FileLogPanel {
         }
     }
 
-    pub fn _is_logging(&self) -> bool {
+    #[allow(dead_code)]
+    pub fn is_logging(&self) -> bool {
         self.log_file.is_some()
     }
 }
 
 impl Default for FileLogPanel {
     fn default() -> Self {
-        use crate::generalsettings::{LOG_FILE_DEFAULT_EXTENSION, LOG_FILE_DEFAULT_NAME};
-        let default_filename = format!("{LOG_FILE_DEFAULT_NAME}{LOG_FILE_DEFAULT_EXTENSION}");
+        let default_filename = "LogFile.txt".to_string();
         Self::new(default_filename)
     }
 }
