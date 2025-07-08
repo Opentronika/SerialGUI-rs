@@ -3,6 +3,7 @@
 mod app;
 mod communicationtrait;
 mod generalsettings;
+mod gui;
 mod guistrings;
 mod info;
 mod serial_impl;
