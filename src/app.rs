@@ -141,9 +141,13 @@ impl eframe::App for TemplateApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_popups(ctx);
 
-        self.menu_bar.show(ctx, || {
-            self.log_panel.clear();
-        });
+        self.menu_bar.show(
+            ctx,
+            || {
+                self.log_panel.clear();
+            },
+            &mut self.settings,
+        );
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let available_size = ui.available_size();

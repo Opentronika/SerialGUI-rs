@@ -3,6 +3,7 @@ pub mod file_log_panel;
 pub mod log_panel;
 pub mod menu_bar;
 pub mod send_panel;
+pub mod settings_panel;
 
 // Re-export para facilitar el uso
 pub use connection_panel::ConnectionPanel;
