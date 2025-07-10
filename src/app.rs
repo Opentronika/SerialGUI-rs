@@ -146,6 +146,9 @@ impl eframe::App for TemplateApp {
             || {
                 self.log_panel.clear();
             },
+            || {
+                self.show_info_popup = true;
+            },
             &mut self.settings,
         );
 
