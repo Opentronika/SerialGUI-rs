@@ -155,7 +155,8 @@ impl eframe::App for TemplateApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             let available_size = ui.available_size();
 
-            self.log_panel.show(ui, available_size);
+            self.log_panel
+                .show(ui, available_size, self.settings.auto_scroll_log);
             ui.separator();
 
             self.connection_panel

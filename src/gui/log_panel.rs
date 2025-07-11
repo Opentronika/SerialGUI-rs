@@ -2,31 +2,42 @@ use egui::Vec2;
 
 pub struct LogPanel {
     pub content: String,
+    should_scroll_to_bottom: bool,
 }
 
 impl LogPanel {
     pub fn new(_max_length: usize) -> Self {
         Self {
             content: "Starting app\n".to_string(),
+            should_scroll_to_bottom: false,
         }
     }
 
-    pub fn show(&mut self, ui: &mut egui::Ui, available_size: Vec2) {
+    pub fn show(&mut self, ui: &mut egui::Ui, available_size: Vec2, autoscroll: bool) {
         let text_size = Vec2::new(available_size.x, available_size.y * 0.85);
 
-        egui::ScrollArea::vertical()
+        let scroll_area = egui::ScrollArea::vertical()
             .max_height(text_size.y)
-            .show(ui, |ui| {
-                ui.add_sized(
-                    text_size,
-                    egui::TextEdit::multiline(&mut self.content)
-                        .font(egui::TextStyle::Monospace)
-                        .code_editor()
-                        .desired_rows(10)
-                        .lock_focus(true)
-                        .desired_width(f32::INFINITY),
-                );
-            });
+            .stick_to_bottom(autoscroll);
+
+        scroll_area.show(ui, |ui| {
+            ui.add_sized(
+                text_size,
+                egui::TextEdit::multiline(&mut self.content)
+                    .font(egui::TextStyle::Monospace)
+                    .code_editor()
+                    .desired_rows(10)
+                    .lock_focus(true)
+                    .desired_width(f32::INFINITY),
+            );
+        });
+
+        // If we need to scroll to bottom and autoscroll is enabled
+        if self.should_scroll_to_bottom && autoscroll {
+            // Use the correct method to scroll to bottom
+            ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
+            self.should_scroll_to_bottom = false;
+        }
     }
 
     pub fn append_log(&mut self, message: &str, max_length: usize) {
@@ -37,6 +48,9 @@ impl LogPanel {
             let excess_len = self.content.len() - max_length;
             self.content.drain(0..excess_len);
         }
+
+        // Mark that we need to scroll to bottom
+        self.should_scroll_to_bottom = true;
     }
 
     pub fn clear(&mut self) {
@@ -59,12 +73,18 @@ impl<'de> serde::Deserialize<'de> for LogPanel {
         D: serde::Deserializer<'de>,
     {
         let content = String::deserialize(deserializer)?;
-        Ok(Self { content })
+        Ok(Self {
+            content,
+            should_scroll_to_bottom: false,
+        })
     }
 }
 
 impl Default for LogPanel {
     fn default() -> Self {
-        Self::new(30000)
+        Self {
+            content: "Starting app\n".to_string(),
+            should_scroll_to_bottom: false,
+        }
     }
 }
