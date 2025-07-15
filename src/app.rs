@@ -115,7 +115,17 @@ impl TemplateApp {
         for event in events {
             match event {
                 CommunicationEvent::DataReceived(data) => {
-                    let message = String::from_utf8_lossy(&data);
+                    let message = if self.settings.byte_mode {
+                        // Convert bytes to hex string representation with packet separator
+                        let hex_string = data
+                            .iter()
+                            .map(|byte| format!("{byte:02X}"))
+                            .collect::<Vec<String>>()
+                            .join(" ");
+                        format!("{hex_string} ")
+                    } else {
+                        String::from_utf8_lossy(&data).to_string()
+                    };
                     self.write_log(&message);
                     ctx.request_repaint();
                 }

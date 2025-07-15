@@ -11,6 +11,7 @@ pub struct AppSettings {
     pub repaint_interval_ms: u64,
     pub window_width: f32,
     pub window_height: f32,
+    pub byte_mode: bool,
 }
 
 impl Default for AppSettings {
@@ -25,6 +26,7 @@ impl Default for AppSettings {
             repaint_interval_ms: 50,
             window_width: 1050.0,
             window_height: 500.0,
+            byte_mode: false,
         }
     }
 }
