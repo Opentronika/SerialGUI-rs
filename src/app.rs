@@ -1,6 +1,6 @@
 use crate::communicationtrait::{CommunicationEvent, CommunicationManager};
 use crate::generalsettings::AppSettings;
-use crate::gui::{ConnectionPanel, FileLogPanel, LogPanel, MenuBar, SendPanel};
+use crate::gui::{ConnectionPanel, FileLogPanel, MenuBar, RxPanel, SendPanel};
 use crate::serial_impl::SerialCommunication;
 use std::sync::{mpsc, Arc, Mutex};
 
@@ -15,7 +15,7 @@ pub struct TemplateApp {
 
     #[serde(skip)]
     connection_panel: ConnectionPanel,
-    log_panel: LogPanel,
+    rx_panel: RxPanel,
     #[serde(skip)]
     menu_bar: MenuBar,
     send_panel: SendPanel,
@@ -44,7 +44,7 @@ impl Default for TemplateApp {
         Self {
             settings: settings.clone(),
             connection_panel: ConnectionPanel::new(),
-            log_panel: LogPanel::new(settings.max_log_string_length),
+            rx_panel: RxPanel::new(settings.max_log_string_length),
             menu_bar: MenuBar::new(),
             send_panel: SendPanel::new(),
             file_log_panel: FileLogPanel::new(default_filename),
@@ -131,7 +131,7 @@ impl TemplateApp {
     }
 
     fn write_log(&mut self, message: &str) {
-        self.log_panel
+        self.rx_panel
             .append_log(message, self.settings.max_log_string_length);
         self.file_log_panel.write_to_file(message);
     }
@@ -144,7 +144,7 @@ impl eframe::App for TemplateApp {
         self.menu_bar.show(
             ctx,
             || {
-                self.log_panel.clear();
+                self.rx_panel.clear();
             },
             || {
                 self.show_info_popup = true;
@@ -155,7 +155,7 @@ impl eframe::App for TemplateApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             let available_size = ui.available_size();
 
-            self.log_panel
+            self.rx_panel
                 .show(ui, available_size, self.settings.auto_scroll_log);
             ui.separator();
 

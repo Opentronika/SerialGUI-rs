@@ -1,11 +1,11 @@
 use egui::Vec2;
 
-pub struct LogPanel {
+pub struct RxPanel {
     pub content: String,
     should_scroll_to_bottom: bool,
 }
 
-impl LogPanel {
+impl RxPanel {
     pub fn new(_max_length: usize) -> Self {
         Self {
             content: "Starting app\n".to_string(),
@@ -58,7 +58,7 @@ impl LogPanel {
     }
 }
 
-impl serde::Serialize for LogPanel {
+impl serde::Serialize for RxPanel {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -67,7 +67,7 @@ impl serde::Serialize for LogPanel {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for LogPanel {
+impl<'de> serde::Deserialize<'de> for RxPanel {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -80,7 +80,7 @@ impl<'de> serde::Deserialize<'de> for LogPanel {
     }
 }
 
-impl Default for LogPanel {
+impl Default for RxPanel {
     fn default() -> Self {
         Self {
             content: "Starting app\n".to_string(),
