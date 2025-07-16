@@ -33,12 +33,14 @@ impl MenuBar {
                 ui.menu_button("Settings", |ui| {
                     self.settings_panel.show(ui, settings);
                 });
-                ui.add_space(16.0);
 
-                egui::widgets::global_theme_preference_buttons(ui);
-                if ui.button("Clear output").clicked() {
-                    clear_callback();
-                }
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    egui::widgets::global_theme_preference_buttons(ui);
+                    if ui.button("Clear output").clicked() {
+                        clear_callback();
+                    }
+                    ui.checkbox(&mut settings.byte_mode, "Byte mode");
+                });
             });
         });
     }

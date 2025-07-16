@@ -38,6 +38,8 @@ impl SettingsPanel {
                 ui.label("Repaint interval (ms):");
                 ui.add(egui::DragValue::new(&mut settings.repaint_interval_ms).range(16..=1000));
             });
+
+            ui.checkbox(&mut settings.byte_mode, "Byte mode");
         });
     }
 }
