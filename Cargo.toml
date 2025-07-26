@@ -1,6 +1,6 @@
 [package]
 name = "serialgui_rs"
-version = "1.0.1"
+version = "1.2.4"
 authors = ["Lutgaru <lutgaru@gmail.com>"]
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-GPLv3", "**/*.rs", "Cargo.toml"]
