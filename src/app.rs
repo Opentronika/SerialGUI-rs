@@ -124,9 +124,10 @@ impl TemplateApp {
                             .join(" ");
                         format!("{hex_string} ")
                     } else {
-                        String::from_utf8_lossy(&data).to_string()
+                        String::from_utf8_lossy(&data).into_owned()
                     };
                     self.write_log(&message);
+                    self.file_log_panel.write_to_file(&data);
                     ctx.request_repaint();
                 }
                 CommunicationEvent::ConnectionClosed => {
@@ -143,7 +144,6 @@ impl TemplateApp {
     fn write_log(&mut self, message: &str) {
         self.rx_panel
             .append_log(message, self.settings.max_log_string_length);
-        self.file_log_panel.write_to_file(message);
     }
 }
 

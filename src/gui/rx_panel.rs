@@ -1,14 +1,16 @@
 use egui::Vec2;
+use std::collections::VecDeque;
 
+#[derive(Default)]
 pub struct RxPanel {
-    pub content: String,
+    pub content: VecDeque<char>,
     should_scroll_to_bottom: bool,
 }
 
 impl RxPanel {
     pub fn new(_max_length: usize) -> Self {
         Self {
-            content: "Starting app\n".to_string(),
+            content: VecDeque::new(),
             should_scroll_to_bottom: false,
         }
     }
@@ -23,7 +25,7 @@ impl RxPanel {
         scroll_area.show(ui, |ui| {
             ui.add_sized(
                 text_size,
-                egui::TextEdit::multiline(&mut self.content)
+                egui::TextEdit::multiline(&mut self.content.iter().collect::<String>())
                     .font(egui::TextStyle::Monospace)
                     .code_editor()
                     .desired_rows(10)
@@ -41,14 +43,12 @@ impl RxPanel {
     }
 
     pub fn append_log(&mut self, message: &str, max_length: usize) {
-        eprintln!("{message}");
-        self.content += message;
-
-        if self.content.len() > max_length {
-            let excess_len = self.content.len() - max_length;
-            self.content.drain(0..excess_len);
+        for ch in message.chars() {
+            if self.content.len() == max_length {
+                self.content.pop_front(); // Elimina el carácter más viejo
+            }
+            self.content.push_back(ch); // Agrega el nuevo carácter
         }
-
         // Mark that we need to scroll to bottom
         self.should_scroll_to_bottom = true;
     }
@@ -72,19 +72,10 @@ impl<'de> serde::Deserialize<'de> for RxPanel {
     where
         D: serde::Deserializer<'de>,
     {
-        let content = String::deserialize(deserializer)?;
+        let content = VecDeque::deserialize(deserializer)?;
         Ok(Self {
             content,
             should_scroll_to_bottom: false,
         })
-    }
-}
-
-impl Default for RxPanel {
-    fn default() -> Self {
-        Self {
-            content: "Starting app\n".to_string(),
-            should_scroll_to_bottom: false,
-        }
     }
 }

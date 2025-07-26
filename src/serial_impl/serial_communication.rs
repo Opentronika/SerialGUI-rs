@@ -71,10 +71,21 @@ impl CommunicationManager for SerialCommunication {
                     let size = port_instance.bytes_to_read().unwrap_or(0);
                     if size > 0 {
                         let mut serial_buf: Vec<u8> = vec![0; size as usize];
-                        port_instance.read_exact(&mut serial_buf).unwrap();
-                        // self.write_log(message.unwrap_or(String::from("")).as_str());
-                        tx.send(CommunicationEvent::DataReceived(serial_buf))
-                            .expect("Failed to send data to GUI");
+                        match port_instance.read_exact(&mut serial_buf) {
+                            Ok(_) => {
+                                // Handle channel send errors gracefully
+                                if tx
+                                    .send(CommunicationEvent::DataReceived(serial_buf))
+                                    .is_err()
+                                {
+                                    eprintln!("GUI channel disconnected, stopping serial thread");
+                                    break; // Exit the loop if GUI is gone
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("Serial read error: {e}");
+                            }
+                        }
                     }
                 }
 

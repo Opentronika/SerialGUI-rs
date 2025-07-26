@@ -80,9 +80,9 @@ impl FileLogPanel {
         }
     }
 
-    pub fn write_to_file(&mut self, message: &str) {
+    pub fn write_to_file(&mut self, message: &[u8]) {
         if let Some(ref mut file) = self.log_file {
-            if let Err(e) = file.write_all(message.as_bytes()) {
+            if let Err(e) = file.write_all(message) {
                 eprintln!("Error writing to log file: {e:?}");
             }
         }
