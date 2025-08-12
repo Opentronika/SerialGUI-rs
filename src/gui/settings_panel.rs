@@ -40,6 +40,8 @@ impl SettingsPanel {
             });
 
             ui.checkbox(&mut settings.byte_mode, "Byte mode");
+            ui.checkbox(&mut settings.show_chart_panel, "Show chart panel");
+            ui.checkbox(&mut settings.show_text_panel, "Show text panel");
         });
     }
 }

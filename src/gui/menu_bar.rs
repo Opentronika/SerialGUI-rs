@@ -40,6 +40,16 @@ impl MenuBar {
                         clear_callback();
                     }
                     ui.checkbox(&mut settings.byte_mode, "Byte mode");
+
+                    // Ensure at least one panel is always enabled
+                    ui.add_enabled(
+                        settings.show_text_panel,
+                        egui::Checkbox::new(&mut settings.show_chart_panel, "Show chart panel"),
+                    );
+                    ui.add_enabled(
+                        settings.show_chart_panel,
+                        egui::Checkbox::new(&mut settings.show_text_panel, "Show text panel"),
+                    );
                 });
             });
         });
