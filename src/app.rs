@@ -130,6 +130,9 @@ impl TemplateApp {
                     };
                     self.write_log(&message);
                     self.file_log_panel.write_to_file(&data);
+                    if self.settings.show_chart_panel {
+                        self.chart_panel.process_rx(data);
+                    }
                     ctx.request_repaint();
                 }
                 CommunicationEvent::ConnectionClosed => {
