@@ -1,10 +1,10 @@
 [Desktop Entry]
 Name=SerialGUI-Rs
 Comment=A cross-platform GUI for serial communication
-Exec=serialgui-rs.SerialGUI-rs
-Icon=${SNAP}/meta/gui/serialgui-rs.png
+Exec=serialgui-rs
 Terminal=false
 Type=Application
+Icon=com.github.opentronika.SerialGUI-rs
 Categories=Development;Electronics,Utility,Communication;
 Keywords=serial;communication;gui;rust;opentronika;
 StartupNotify=true
