@@ -136,7 +136,7 @@ impl ChartPanel {
                 };
 
                 let to_screen = emath::RectTransform::from_to(
-                    Rect::from_x_y_ranges(x_range, min_val..=max_val),
+                    Rect::from_x_y_ranges(x_range, max_val..=min_val), // Change this line
                     rect,
                 );
 
