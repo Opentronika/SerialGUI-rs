@@ -82,6 +82,40 @@ Get-FileHash .\SerialGUI_rs-x86_64-pc-windows-msvc.exe -Algorithm SHA256
 2. Select the serial port and configure the parameters according to your needs.
 3. Start monitoring the serial communication.
 
+## Graph Mode
+
+SerialGUI-Rs now includes a graph visualization feature for displaying numeric data in real-time.
+
+### How to Use Graph Mode
+
+1. Enable the chart panel by checking "Show chart panel" in the top menu bar
+2. Send numeric data in a comma-separated format through your serial device
+3. Watch as your data is automatically plotted on the chart
+
+### Supported Data Format
+
+The graph mode accepts data in the following format:
+```
+value1,value2,value3,value4,...
+```
+
+**Examples:**
+- Simple integers: `1,2,3,4,5,6`
+- Decimal values: `1.5,2.7,3.2,4.8`
+- Mixed data: `10,25.5,30,15.2`
+- Negative numbers: `-1,2,-3.5,4`
+
+### Features
+
+- **Real-time plotting**: Data points appear immediately as they arrive
+- **Auto-scaling**: The Y-axis automatically adjusts to fit your data range
+- **Streaming support**: Works with continuous data streams
+- **Fragmentation handling**: Correctly processes data split across multiple packets
+- **Memory efficient**: Limits data history to 1000 samples to prevent memory issues
+- **Grid lines**: Visual reference lines help interpret the data values
+- **Axis labels**: Clear X and Y axis labels showing data values and sample indices
+
+
 ## Contribution
 
 Thank you for considering contributing to **SerialGUI-Rs**! Here are some basic rules for contributing to the project, following the guidelines of GNU projects:
