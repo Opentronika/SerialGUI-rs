@@ -1,6 +1,6 @@
 use crate::communicationtrait::{CommunicationEvent, CommunicationManager};
 use crate::generalsettings::AppSettings;
-use crate::gui::{ConnectionPanel, FileLogPanel, MenuBar, RxPanel, SendPanel};
+use crate::gui::{ChartPanel, ConnectionPanel, FileLogPanel, MenuBar, RxPanel, SendPanel};
 use crate::serial_impl::SerialCommunication;
 use std::sync::{mpsc, Arc, Mutex};
 
@@ -16,6 +16,7 @@ pub struct TemplateApp {
     #[serde(skip)]
     connection_panel: ConnectionPanel,
     rx_panel: RxPanel,
+    chart_panel: ChartPanel,
     #[serde(skip)]
     menu_bar: MenuBar,
     send_panel: SendPanel,
@@ -45,6 +46,7 @@ impl Default for TemplateApp {
             settings: settings.clone(),
             connection_panel: ConnectionPanel::new(),
             rx_panel: RxPanel::new(settings.max_log_string_length),
+            chart_panel: ChartPanel::new(settings.max_log_string_length),
             menu_bar: MenuBar::new(),
             send_panel: SendPanel::new(),
             file_log_panel: FileLogPanel::new(default_filename),
@@ -128,6 +130,9 @@ impl TemplateApp {
                     };
                     self.write_log(&message);
                     self.file_log_panel.write_to_file(&data);
+                    if self.settings.show_chart_panel {
+                        self.chart_panel.process_rx(data);
+                    }
                     ctx.request_repaint();
                 }
                 CommunicationEvent::ConnectionClosed => {
@@ -164,10 +169,22 @@ impl eframe::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let available_size = ui.available_size();
+            let mut chart_area = available_size;
+            if self.settings.show_text_panel && self.settings.show_chart_panel {
+                chart_area.y *= 0.5;
+            }
 
-            self.rx_panel
-                .show(ui, available_size, self.settings.auto_scroll_log);
-            ui.separator();
+            if self.settings.show_chart_panel {
+                self.chart_panel
+                    .show(ui, chart_area, self.settings.auto_scroll_log);
+                ui.separator();
+            }
+
+            if self.settings.show_text_panel {
+                self.rx_panel
+                    .show(ui, chart_area, self.settings.auto_scroll_log);
+                ui.separator();
+            }
 
             self.connection_panel
                 .show(ui, &mut self.serial_manager, &mut self.serial_events_rx);

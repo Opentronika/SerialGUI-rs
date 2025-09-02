@@ -12,6 +12,8 @@ pub struct AppSettings {
     pub window_width: f32,
     pub window_height: f32,
     pub byte_mode: bool,
+    pub show_chart_panel: bool,
+    pub show_text_panel: bool,
 }
 
 impl Default for AppSettings {
@@ -27,6 +29,8 @@ impl Default for AppSettings {
             window_width: 1050.0,
             window_height: 500.0,
             byte_mode: false,
+            show_chart_panel: false,
+            show_text_panel: true,
         }
     }
 }
