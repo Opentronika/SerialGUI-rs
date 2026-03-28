@@ -17,7 +17,7 @@ jobs:
             ARCH_SUFFIX: MacOS-arm64 # Suffix for file names, if needed
 
           # Configuration for Intel architecture
-          - os: macos-13 # macos-13 is a good option for x86_64, macos-latest might be ARM
+          - os: macos-15-intel # macos-15-intel is a good option for x86_64, macos-latest might be ARM
             TARGET: x86_64-apple-darwin
             ARCH_SUFFIX: MacOS-x64 # Suffix for file names, if needed
     env:
