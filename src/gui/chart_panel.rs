@@ -1,4 +1,4 @@
-use egui::{containers::Frame, emath, epaint, epaint::PathStroke, pos2, Color32, Pos2, Rect, Vec2};
+use egui::{emath, epaint, epaint::PathStroke, pos2, Color32, Frame, Pos2, Rect, Vec2};
 use std::collections::VecDeque;
 
 #[derive(Default)]
@@ -46,7 +46,10 @@ impl ChartPanel {
         if self.stream_buffer.len() > 50 {
             // If buffer gets too long without a comma, it's probably garbage
             // Keep only the last 20 characters in case there's a valid number at the end
-            let keep_from = self.stream_buffer.len().saturating_sub(20);
+            // (floor_char_boundary avoids splitting a multi-byte UTF-8 character)
+            let keep_from = self
+                .stream_buffer
+                .floor_char_boundary(self.stream_buffer.len().saturating_sub(20));
             self.stream_buffer = self.stream_buffer[keep_from..].to_string();
         }
 
@@ -89,7 +92,7 @@ impl ChartPanel {
                                 padded_min + (padded_max - padded_min) * (1.0 - i as f32 / 5.0);
                             let y_pos = (plot_size.y / 5.0) * i as f32;
 
-                            ui.allocate_new_ui(
+                            ui.scope_builder(
                                 egui::UiBuilder::new().max_rect(Rect::from_min_size(
                                     ui.min_rect().min + egui::vec2(0.0, y_pos - 8.0),
                                     Vec2::new(margin_left - 15.0, 16.0),
@@ -232,5 +235,29 @@ impl<'de> serde::Deserialize<'de> for ChartPanel {
             samples: VecDeque::new(),
             stream_buffer: String::new(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_comma_separated_samples() {
+        let mut panel = ChartPanel::new(10);
+        panel.process_rx(b"1.5, 2.5,3\n".to_vec());
+        assert_eq!(panel.samples.len(), 2);
+        assert_eq!(panel.samples[0], 1.5);
+        assert_eq!(panel.samples[1], 2.5);
+        assert_eq!(panel.stream_buffer, "3\n");
+    }
+
+    #[test]
+    fn multibyte_garbage_does_not_panic() {
+        let mut panel = ChartPanel::new(10);
+        // More than 50 bytes without a comma, so the buffer gets trimmed.
+        // `€` is three bytes, which makes the trim point land inside a character.
+        panel.process_rx("€".repeat(20).into_bytes());
+        assert!(panel.samples.is_empty());
     }
 }

@@ -1,11 +1,11 @@
 use vergen_gitcl::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let build = BuildBuilder::all_build()?;
-    let cargo = CargoBuilder::all_cargo()?;
-    let gitcl = GitclBuilder::all_git()?;
-    let rustc = RustcBuilder::all_rustc()?;
-    let si = SysinfoBuilder::all_sysinfo()?;
+    let build = Build::all_build();
+    let cargo = Cargo::all_cargo();
+    let gitcl = Gitcl::all_git();
+    let rustc = Rustc::all_rustc();
+    let si = Sysinfo::all_sysinfo();
 
     Emitter::default()
         .add_instructions(&build)?

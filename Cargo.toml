@@ -4,39 +4,38 @@ version = "1.4.0"
 authors = ["Lutgaru <lutgaru@gmail.com>"]
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-GPLv3", "**/*.rs", "Cargo.toml"]
-rust-version = "1.81"
+rust-version = "1.96"
 build = "build.rs"
 
 [build-dependencies]
-vergen-gitcl = { version = "1.0.0", features = ["build", "cargo", "rustc", "si"] }
+vergen-gitcl = { version = "10.0.3", features = ["build", "cargo", "rustc", "si"] }
 
 [package.metadata.docs.rs]
 all-features = true
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-egui = "0.31.1"
-eframe = { version = "0.31.1", default-features = false, features = [
+egui = "0.37.0"
+eframe = { version = "0.37.0", default-features = false, features = [
     "accesskit",     # Make egui compatible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
     "wayland",       # To support Linux (and CI)
 ] }
-log = "0.4.26"
-chrono = "0.4.41"
-reqwest = { version = "0.12.20", features = ["json"] }
-tokio = { version = "1", features = ["full"] }
-serde_json = "1"
-webbrowser = "1.0.5"
+chrono = "0.4.45"
+reqwest = { version = "0.13.5", features = ["json"] }
+tokio = { version = "1.54.1", features = ["rt", "net", "time"] }
+serde_json = "1.0.154"
+webbrowser = "1.2.7"
 
 # You only need serde if you want app persistence:
-serde = { version = "1.0.219", features = ["derive"] }
-serialport = "4.7.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serialport = "4.10.1"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.11.8"
+env_logger = "0.11.11"
 
 [profile.release]
 opt-level = 2 # optimized for size and speed

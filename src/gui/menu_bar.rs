@@ -14,20 +14,20 @@ impl MenuBar {
 
     pub fn show(
         &mut self,
-        ctx: &egui::Context,
+        ui: &mut egui::Ui,
         clear_callback: impl FnOnce(),
         show_info_callback: impl FnOnce(),
         settings: &mut AppSettings,
     ) {
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
+        egui::Panel::top("top_panel").show(ui, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Info").clicked() {
                         show_info_callback();
-                        ui.close_menu();
+                        ui.close();
                     }
                     if ui.button("Quit").clicked() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                     }
                 });
                 ui.menu_button("Settings", |ui| {
