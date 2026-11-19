@@ -153,11 +153,13 @@ impl TemplateApp {
 }
 
 impl eframe::App for TemplateApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.handle_popups(ctx);
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
+
+        self.handle_popups(&ctx);
 
         self.menu_bar.show(
-            ctx,
+            ui,
             || {
                 self.rx_panel.clear();
             },
@@ -167,7 +169,7 @@ impl eframe::App for TemplateApp {
             &mut self.settings,
         );
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        egui::CentralPanel::default_margins().show(ui, |ui| {
             let available_size = ui.available_size();
             let mut chart_area = available_size;
             if self.settings.show_text_panel && self.settings.show_chart_panel {
@@ -195,7 +197,7 @@ impl eframe::App for TemplateApp {
                 .show(ui, &mut self.serial_manager, available_size, &self.settings);
         });
 
-        self.handle_serial_events(ctx);
+        self.handle_serial_events(&ctx);
         ctx.request_repaint_after(self.settings.get_repaint_interval());
     }
 
