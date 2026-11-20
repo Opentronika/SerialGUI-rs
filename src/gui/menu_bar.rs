@@ -61,3 +61,30 @@ impl Default for MenuBar {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use egui::FontId;
+
+    #[test]
+    fn theme_icons_are_available_in_the_default_fonts() {
+        // egui 0.37's native theme selector is icon-only, and its emoji fonts
+        // are opt-in. Keep the `monochrome_emoji_fonts` feature in Cargo.toml
+        // from regressing, otherwise the selector renders as missing glyphs.
+        let ctx = egui::Context::default();
+
+        ctx.run_ui(Default::default(), |ui| {
+            ui.ctx().fonts_mut(|fonts| {
+                let font_id = FontId::proportional(14.0);
+
+                for icon in ['☀', '🌙', '💻'] {
+                    assert!(
+                        fonts.has_glyph(&font_id, icon),
+                        "missing glyph for theme icon {icon:?}"
+                    );
+                }
+            });
+        })
+        .drop_without_applying_deltas();
+    }
+}
